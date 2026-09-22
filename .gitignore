@@ -1,0 +1,36 @@
+# Third-party checkouts. None of these are ours to publish, and together they are
+# most of the directory by weight (~750 MB). `scripts/fetch_prior_art.sh` re-clones
+# every one of them by URL at the pinned commit, so the survey stays reproducible
+# without vendoring someone else's history into this repo.
+semif/
+edge0/
+offload_projects/
+
+# The SemIf patch itself IS published, as a diff plus the complete files, under
+# patch/. That is deliberate: semif/ is a clone of TheoLeeCJ/SemIf, and pushing it
+# here would either carry foreign history or silently fork it.
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.uv-setuptools-*.lock
+uv-setuptools-*.lock
+
+# Model weights. 20 GB each; never in git. Download per SETUP.md.
+*.gguf
+*.safetensors
+*.sha256.json
+
+# Local scratch
+.claude/
+pytest-of-scribe/
+.pytest_cache/
+*.log
+
+# Results that were measured wrong and deliberately discarded. Kept out of the
+# repo because a file named INVALID-*.jsonl is a trap for a reader who greps for
+# results/ and does not notice the prefix. The findings they produced are recorded
+# in docs/SEMIF_LLAMACPP_SSD.md instead.
+INVALID-*.jsonl

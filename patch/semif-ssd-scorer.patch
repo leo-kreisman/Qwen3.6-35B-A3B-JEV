@@ -1,0 +1,754 @@
+diff --git a/src/semif_phase1/llamacpp_backend.py b/src/semif_phase1/llamacpp_backend.py
+index 5600ae8..7d68709 100644
+--- a/src/semif_phase1/llamacpp_backend.py
++++ b/src/semif_phase1/llamacpp_backend.py
+@@ -34,14 +34,128 @@ DECODE_CHUNK = 512
+ _BACKEND_INITIALIZED = False
+ 
+ 
++def _env_flag(name: str, default: bool) -> bool:
++    """Read a boolean environment override; unset keeps the default."""
++    value = os.environ.get(name)
++    if value is None:
++        return default
++    return value.strip().lower() not in {"0", "false", "no", "off", ""}
++
++
++_LOAD_MODES = {"auto": -1, "none": 0, "mmap": 1, "mlock": 2, "mmap_mlock": 3, "direct_io": 4}
++_LOAD_MODE_NAMES = {value: name for name, value in _LOAD_MODES.items()}
++
++
++def _load_mode() -> int:
++    """Resolve ``SEMIF_LLAMA_LOAD_MODE`` to a ``llama_load_mode`` value."""
++    name = os.environ.get("SEMIF_LLAMA_LOAD_MODE", "mmap").strip().lower()
++    if name not in _LOAD_MODES:
++        raise ValueError(
++            f"unknown SEMIF_LLAMA_LOAD_MODE {name!r}; expected one of {sorted(_LOAD_MODES)}"
++        )
++    return _LOAD_MODES[name]
++
++
++def _seq_max() -> int:
++    """Resolve ``SEMIF_LLAMA_SEQ_MAX`` to the context's branch capacity.
++
++    This is how many criteria can be scored in a *single* forward pass. It is a
++    context-creation parameter (``n_seq_max``), so changing it means the model
++    must be reloaded; the default covers the usual JEV batch without making every
++    context pay for a large KV.
++    """
++    raw = os.environ.get("SEMIF_LLAMA_SEQ_MAX", "8").strip()
++    try:
++        value = int(raw)
++    except ValueError:
++        raise ValueError(f"SEMIF_LLAMA_SEQ_MAX {raw!r} is not an integer") from None
++    if value < 1:
++        raise ValueError(f"SEMIF_LLAMA_SEQ_MAX must be at least 1, got {value}")
++    return value
++
++
++def _ubatch(sequences: int) -> int:
++    """Physical batch size: enough to hold one whole branch group in one ubatch.
++
++    Every ubatch walks all layers and re-reads their experts, so a group split
++    across two ubatches pays two full model sweeps — and llama.cpp's default of
++    512 did exactly that to a 908-token four-criterion group without saying so.
++    A group is at most one sequence per criterion, so size by ``sequences``.
++    """
++    pinned = os.environ.get("SEMIF_LLAMA_UBATCH", "").strip()
++    if pinned:
++        try:
++            value = int(pinned)
++        except ValueError:
++            raise ValueError(f"SEMIF_LLAMA_UBATCH {pinned!r} is not an integer") from None
++        if value < 1:
++            raise ValueError(f"SEMIF_LLAMA_UBATCH must be at least 1, got {value}")
++        return value
++    raw = os.environ.get("SEMIF_LLAMA_UBATCH_PER_SEQ", "512").strip()
++    try:
++        per_sequence = int(raw)
++    except ValueError:
++        raise ValueError(f"SEMIF_LLAMA_UBATCH_PER_SEQ {raw!r} is not an integer") from None
++    if per_sequence < 1:
++        raise ValueError(f"SEMIF_LLAMA_UBATCH_PER_SEQ must be at least 1, got {per_sequence}")
++    return max(512, sequences * per_sequence)
++
++
++def _default_threads() -> int:
++    """Default thread count: mild oversubscription of the hardware threads.
++
++    Deliberately more threads than the CPU has. When the checkpoint does not fit in
++    RAM the decode stalls on expert-weight page faults, and a thread waiting on a
++    fault is not runnable — so a decode served from disk wants *more* runnable
++    threads than hardware threads, to keep the device queue fed. Measured over one
++    fixed pass (908 token-forwards, ~41 GB read, 6-core/12-thread host):
++
++        6 threads 54.6 s | 8 threads 50.4 s | 12 threads 47.9 s
++        16 threads 38.4 s | 20 threads 38.4 s
++
++    The knee is 4/3 of the hardware threads, which is what this returns. Note the
++    previous default (`os.cpu_count()`) was measurably worse, and the project's own
++    runner pinned 6 — half this host — for no recorded reason.
++    """
++    return max(4, (os.cpu_count() or 4) * 4 // 3)
++
++
+ def _cpu_model_params(library):
+-    """Initialize llama.cpp once and return model parameters with GPU offload disabled."""
++    """Initialize llama.cpp once and return CPU-only, disk-streamed model parameters.
++
++    Expert weights stay file-backed and demand-paged. Two fields control that, and
++    neither is ``use_mmap`` / ``use_mlock``: those were removed from
++    ``llama_model_params`` in this llama.cpp, and because a ctypes ``Structure``
++    accepts arbitrary Python attributes, assigning them succeeds while llama.cpp
++    never reads them -- a silent no-op. The real controls are:
++
++    ``load_mode``
++        ``mmap`` keeps the GGUF mapped, so a routed expert is read from disk on
++        first touch and its page stays evictable. ``mlock`` / ``mmap_mlock`` would
++        pin the weights in RAM, and a checkpoint larger than memory then fails to
++        load at all rather than merely running slow.
++
++    ``use_extra_bufts``
++        Enables the CPU backend's extra buffer types, which include the *repack*
++        buffer. Repack rewrites quantized expert tensors into an interleaved
++        SIMD-friendly layout (``q4_K`` -> ``q4_K_8x8``) **at load time**,
++        materialising them into anonymous memory and defeating mmap streaming
++        entirely -- the failure is an OOM kill during load, not slow inference.
++        It is therefore off by default here, since streaming is this backend's
++        point. Turn it back on (``SEMIF_LLAMA_EXTRA_BUFT=1``) when the checkpoint
++        fits in RAM and prompt-processing speed matters more than residency.
++
++    Both are environment-overridable so a run can be pinned without editing the
++    scorer.
++    """
+     global _BACKEND_INITIALIZED
+     if not _BACKEND_INITIALIZED:
+         library.llama_backend_init()
+         _BACKEND_INITIALIZED = True
+     params = library.llama_model_default_params()
+     params.n_gpu_layers = 0
++    params.load_mode = _load_mode()
++    params.use_extra_bufts = _env_flag("SEMIF_LLAMA_EXTRA_BUFT", False)
+     return params
+ 
+ 
+@@ -79,15 +193,31 @@ def _logsumexp(values: numpy.ndarray) -> float:
+ class _Engine:
+     """One llama.cpp context bound to a loaded GGUF model."""
+ 
+-    def __init__(self, library, model, context_tokens: int, threads: int):
++    def __init__(self, library, model, context_tokens: int, threads: int, sequences: int = 1,
++                 ubatch: int | None = None):
+         params = library.llama_context_default_params()
+         params.n_ctx = context_tokens
+-        params.n_seq_max = 1
++        if ubatch is None:
++            ubatch = _ubatch(sequences)
++        # Branches are scored as parallel sequences carrying the whole prompt, so
++        # the context needs room for len(rows) live sequences rather than 1: with
++        # n_seq_max = 1 the only way to score N criteria is N sequential passes,
++        # each re-reading every expert from disk, which is what made scoring cost
++        # linear in the criteria count.
++        params.n_seq_max = sequences
+         # llama.cpp requires n_outputs_max >= n_seq_max * n_outputs_max_per_seq.
+-        params.n_outputs_max = 1
++        params.n_outputs_max = sequences
++        # The physical batch is the unit that actually decides I/O. A decode of
++        # more tokens than n_ubatch is split into several ubatches, and each
++        # ubatch walks all layers and re-reads their experts — so leaving this at
++        # llama.cpp's default of 512 turned a 908-token branch group into two
++        # full model sweeps. Sized here to hold one whole group in one ubatch.
++        params.n_batch = params.n_ubatch = ubatch
+         params.n_threads = threads
+         params.n_threads_batch = threads
+         self.lib = library
++        self.sequences = sequences
++        self.ubatch = int(params.n_ubatch)
+         self.model = model
+         self.context = library.llama_init_from_model(model, params)
+         if not self.context:
+@@ -160,6 +290,79 @@ class _Engine:
+     def branch_logits(self, prefix_length: int, suffix: list[int]) -> numpy.ndarray:
+         return self._decode(suffix, prefix_length, 0, True)
+ 
++    def branch_logits_batched(self, prefix: list[int], suffixes: list[list[int]]):
++        """Score every branch in one batched forward pass, one logits row each.
++
++        Each branch is a sequence carrying the *whole* prompt — the shared prefix
++        plus its own suffix — and all of them ride in a single ``llama_decode``.
++        That is what makes scoring cost independent of the criteria count on the
++        SSD path: the routed experts for the whole set are read once per forward
++        pass instead of once per criterion.
++
++        The cheaper-looking alternative — prefill the prefix once and copy its KV
++        into each branch with ``llama_memory_seq_cp`` — does not work here. This
++        checkpoint is a *hybrid*: ``qwen35moe`` interleaves recurrent
++        (linear-attention) layers with attention layers, and llama.cpp's
++        ``llama_memory_hybrid::seq_cp`` aborts on the recurrent half (measured:
++        SIGABRT in ``llama_kv_cache::seq_cp``). Recomputing the prefix per branch
++        is compute, and compute is not the term that dominates here — I/O is.
++
++        Positions restart at 0 for every branch because each sequence owns its own
++        KV; the memory is cleared by the caller before this runs.
++        """
++        if not suffixes:
++            raise ValueError("Refusing to score an empty branch set")
++        if len(suffixes) > self.sequences:
++            raise ValueError(
++                f"{len(suffixes)} branches exceed the context's n_seq_max={self.sequences}; "
++                "raise SEMIF_LLAMA_SEQ_MAX or score in smaller groups"
++            )
++        if not prefix:
++            raise ValueError("Refusing to score over an empty prefix")
++        if any(not suffix for suffix in suffixes):
++            raise ValueError("Refusing to score an empty branch")
++        # Flat work list: (token, position, sequence, is_last_for_that_sequence).
++        pending = []
++        for sequence, suffix in enumerate(suffixes):
++            tokens = list(prefix) + list(suffix)
++            last = len(tokens) - 1
++            pending.extend(
++                (token, position, sequence, position == last)
++                for position, token in enumerate(tokens)
++            )
++        logits: list = [None] * len(suffixes)
++        # Chunk at the physical batch size, not DECODE_CHUNK: handing llama.cpp
++        # more tokens than one ubatch only makes it split internally, which is
++        # the extra model sweep this is here to avoid.
++        for offset in range(0, len(pending), self.ubatch):
++            chunk = pending[offset : offset + self.ubatch]
++            batch = self.lib.llama_batch_init(len(chunk), 0, 1)
++            marked = []
++            try:
++                for index, (token, position, sequence, is_last) in enumerate(chunk):
++                    batch.token[index] = token
++                    batch.pos[index] = position
++                    batch.n_seq_id[index] = 1
++                    batch.seq_id[index][0] = sequence
++                    batch.logits[index] = int(is_last)
++                    if is_last:
++                        marked.append((index, sequence))
++                batch.n_tokens = len(chunk)
++                if self.lib.llama_decode(self.context, batch):
++                    raise RuntimeError("llama_decode failed; raise --max-tokens if prompts grew")
++            finally:
++                self.lib.llama_batch_free(batch)
++            for index, sequence in marked:
++                pointer = self.lib.llama_get_logits_ith(self.context, index)
++                if not pointer:
++                    raise RuntimeError("llama.cpp returned no logits for a scored branch")
++                logits[sequence] = numpy.ctypeslib.as_array(
++                    ctypes.cast(pointer, ctypes.POINTER(ctypes.c_float)), shape=(self.vocab_size,)
++                ).copy()
++        if any(row is None for row in logits):
++            raise RuntimeError("llama.cpp returned no logits for a scored branch")
++        return logits
++
+     def full_logits(self, tokens: list[int]) -> numpy.ndarray:
+         self.clear()
+         return self._decode(tokens, 0, 0, True)
+@@ -207,6 +410,53 @@ def _verify_vocabulary(tokenizer, library, vocab) -> None:
+             raise RuntimeError(f"Answer slot {letter!r} is not a shared single token")
+ 
+ 
++def _gguf_digest(gguf: Path) -> tuple[str, str]:
++    """Return ``(sha256, source)`` for the checkpoint, reusing a sidecar when valid.
++
++    The digest is an integrity record, and computing it reads the *whole* file —
++    20.9 GB on this checkpoint. That hurts twice over: llama.cpp's own loader then
++    reads the file again (measured: it reads all of it even under ``mmap``), so a
++    cold run paid two full sweeps before scoring a single token.
++
++    So the digest is cached beside the checkpoint as ``<name>.sha256.json``, keyed
++    on size + ``mtime_ns``. Any change to either invalidates it and the file is
++    hashed again. ``SEMIF_GGUF_DIGEST=compute`` forces a fresh hash;
++    ``SEMIF_GGUF_DIGEST=skip`` records no digest at all rather than a stale one.
++    Whichever path is taken is named in the result metadata, so a row always says
++    how much its own integrity record can be trusted.
++    """
++    mode = os.environ.get("SEMIF_GGUF_DIGEST", "cache").strip().lower()
++    if mode not in {"cache", "compute", "skip"}:
++        raise ValueError(
++            f"unknown SEMIF_GGUF_DIGEST {mode!r}; expected cache, compute or skip"
++        )
++    if mode == "skip":
++        return "", "skipped"
++    stat = gguf.stat()
++    sidecar = gguf.with_name(gguf.name + ".sha256.json")
++    if mode == "cache":
++        try:
++            record = json.loads(sidecar.read_text())
++        except (OSError, ValueError):
++            record = None
++        if (isinstance(record, dict) and record.get("sha256")
++                and record.get("bytes") == stat.st_size
++                and record.get("mtime_ns") == stat.st_mtime_ns):
++            return str(record["sha256"]), "cache"
++    checksum = hashlib.sha256()
++    with gguf.open("rb") as stream:
++        for block in iter(lambda: stream.read(8 * 1024 * 1024), b""):
++            checksum.update(block)
++    digest = checksum.hexdigest()
++    try:
++        sidecar.write_text(json.dumps(
++            {"sha256": digest, "bytes": stat.st_size, "mtime_ns": stat.st_mtime_ns}
++        ))
++    except OSError:
++        pass  # A read-only model directory is fine; the digest is still returned.
++    return digest, "computed"
++
++
+ def load_model(source: str, revision: str, gguf, *, threads: int | None = None,
+                context_tokens: int = 4096):
+     """Load one pinned reference tokenizer plus a local GGUF checkpoint for CPU scoring."""
+@@ -221,7 +471,7 @@ def load_model(source: str, revision: str, gguf, *, threads: int | None = None,
+     if not (isinstance(context_tokens, int) and context_tokens > 0):
+         raise ValueError("context_tokens must be a positive integer")
+     if threads is None:
+-        threads = os.cpu_count() or 4
++        threads = _default_threads()
+     if not (isinstance(threads, int) and threads >= 1):
+         raise ValueError("threads must be a positive integer")
+     import transformers
+@@ -235,19 +485,17 @@ def load_model(source: str, revision: str, gguf, *, threads: int | None = None,
+               "local_files_only": local or offline, "trust_remote_code": False}
+     tokenizer = transformers.AutoTokenizer.from_pretrained(source, **common)
+     # Finish file I/O before allocating native resources so read failures cannot leak them.
+-    checksum = hashlib.sha256()
+-    with gguf.open("rb") as stream:
+-        for block in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+-            checksum.update(block)
++    digest, digest_source = _gguf_digest(gguf)
+     gguf_record = {"file": gguf.name, "bytes": gguf.stat().st_size,
+-                   "sha256": checksum.hexdigest()}
++                   "sha256": digest, "digest_source": digest_source}
+     model_params = _cpu_model_params(llama_cpp)
+     model = llama_cpp.llama_model_load_from_file(str(gguf).encode("utf-8"), model_params)
+     if not model:
+         raise RuntimeError(f"llama.cpp failed to load the GGUF checkpoint: {gguf}")
+     window = context_tokens + 64
++    sequences = _seq_max()
+     try:
+-        engine = _Engine(llama_cpp, model, window, threads)
++        engine = _Engine(llama_cpp, model, window, threads, sequences)
+         vocab = llama_cpp.llama_model_get_vocab(model)
+         _verify_vocabulary(tokenizer, llama_cpp, vocab)
+     except Exception:
+@@ -264,8 +512,13 @@ def load_model(source: str, revision: str, gguf, *, threads: int | None = None,
+         "vocab_size": engine.vocab_size,
+         "threads": threads,
+         "n_gpu_layers": 0,
++        "load_mode": int(model_params.load_mode),
++        "load_mode_name": _LOAD_MODE_NAMES.get(int(model_params.load_mode), "unknown"),
++        "use_extra_bufts": bool(model_params.use_extra_bufts),
+         "max_prompt_tokens": context_tokens,
+         "context_tokens": engine.context_tokens,
++        "n_seq_max": engine.sequences,
++        "n_ubatch": engine.ubatch,
+         "decode_chunk": DECODE_CHUNK,
+         "llama_cpp_python_version": llama_cpp.__version__,
+         "transformers_version": transformers.__version__,
+@@ -370,35 +623,48 @@ def score_shared(model, tokenizer, rows: list[dict], metadata: dict, max_tokens:
+     if not prefix or any(ids[: len(prefix)] != prefix or len(ids) <= len(prefix) for ids, _, _ in encoded):
+         raise ValueError("The fixed state prefix does not match every full prompt")
+     encode_seconds = time.perf_counter() - started
+-    mark = time.perf_counter()
+-    model.engine.clear()
+-    model.engine.prefill(prefix)
+-    state_data = model.engine.save_state()
+-    prefill_seconds = time.perf_counter() - mark
+-    copy_seconds = suffix_seconds = 0.0
++    # One forward pass per group of criteria rather than one per criterion: every
++    # branch carries the whole prompt as its own sequence inside a single
++    # llama_decode, so the routed experts are read once for the whole group
++    # instead of once per criterion. There is no separate prefix prefill and no
++    # per-branch state restore — both existed only to work around a
++    # single-sequence context, which is exactly what made the cost linear in the
++    # row count.
++    width = max(1, model.engine.sequences)
++    forward_seconds = 0.0
+     results = []
+-    for row, row_encoded in zip(rows, encoded):
+-        ids, slots, _ = row_encoded
+-        mark = time.perf_counter()
+-        model.engine.restore_state(state_data)
+-        copy_seconds += time.perf_counter() - mark
++    for start in range(0, len(rows), width):
++        group = list(zip(rows, encoded))[start : start + width]
++        # Release the previous group's cells before its sequence ids are reused. Every
++        # branch carries the whole prompt as its own sequence, so positions restart at 0
++        # and a sequence still holding the previous group's tokens fails the decode
++        # outright — measured: 16 criteria against n_seq_max=8 raised "llama_decode
++        # failed" from the second group onward. Only reachable beyond n_seq_max criteria.
++        model.engine.clear()
+         mark = time.perf_counter()
+-        vocabulary = model.engine.branch_logits(len(prefix), ids[len(prefix) :])
+-        suffix_seconds += time.perf_counter() - mark
+-        results.append(_result(
+-            row, row_encoded, vocabulary[slots].tolist(), vocabulary, metadata,
+-            "llamacpp-state-restore-shared-v1", "quantized branch last-position logits over a restored prefix state",
+-        ))
++        vocabularies = model.engine.branch_logits_batched(
++            prefix, [ids[len(prefix):] for _, (ids, _, _) in group]
++        )
++        forward_seconds += time.perf_counter() - mark
++        for (row, row_encoded), vocabulary in zip(group, vocabularies):
++            _, slots, _ = row_encoded
++            results.append(_result(
++                row, row_encoded, vocabulary[slots].tolist(), vocabulary, metadata,
++                "llamacpp-batched-prefill-shared-v2",
++                "quantized batched full-prompt last-position logits over one shared state",
++            ))
+     suffix_total = sum(len(ids) - len(prefix) for ids, _, _ in encoded)
+     timing = {
+         "total_seconds": time.perf_counter() - started,
+         "encode_seconds": encode_seconds,
+         "prefix_tokens": len(prefix),
+-        "prefill_seconds": prefill_seconds,
+-        "replicate_seconds": copy_seconds,
+-        "suffix_forward_seconds": suffix_seconds,
++        "prefill_seconds": 0.0,
++        "replicate_seconds": 0.0,
++        "suffix_forward_seconds": forward_seconds,
++        "batched_forward_seconds": forward_seconds,
+         "batch_size": len(rows),
+-        "branch_state_bytes": state_data[1],
++        "batched_passes": (len(rows) + width - 1) // width,
++        "batched_tokens": suffix_total + len(prefix) * len(rows),
+         "true_suffix_tokens": suffix_total,
+         "padded_suffix_tokens": suffix_total,
+     }
+diff --git a/tests/test_llamacpp.py b/tests/test_llamacpp.py
+index 29608cb..f184c8a 100644
+--- a/tests/test_llamacpp.py
++++ b/tests/test_llamacpp.py
+@@ -91,6 +91,51 @@ def test_cpu_model_params_initialize_once_and_disable_offload(monkeypatch):
+     assert first.n_gpu_layers == second.n_gpu_layers == 0
+ 
+ 
++_FAKE_PARAMS = dict(n_gpu_layers=-1, load_mode=-1, use_extra_bufts=True)  # llama.cpp's defaults
++
++
++@pytest.mark.parametrize("env,expected_mode,expected_bufts", [
++    ({}, "mmap", False),
++    ({"SEMIF_LLAMA_LOAD_MODE": "mlock"}, "mlock", False),
++    ({"SEMIF_LLAMA_LOAD_MODE": "mmap_mlock", "SEMIF_LLAMA_EXTRA_BUFT": "1"}, "mmap_mlock", True),
++    ({"SEMIF_LLAMA_LOAD_MODE": "auto", "SEMIF_LLAMA_EXTRA_BUFT": "off"}, "auto", False),
++])
++def test_cpu_model_params_streaming_overrides(monkeypatch, env, expected_mode, expected_bufts):
++    """Mapped-but-unlocked and repack-free by default; env vars can pin either."""
++    from semif_phase1 import llamacpp_backend
++
++    for name in ("SEMIF_LLAMA_LOAD_MODE", "SEMIF_LLAMA_EXTRA_BUFT"):
++        monkeypatch.delenv(name, raising=False)
++    for name, value in env.items():
++        monkeypatch.setenv(name, value)
++    library = SimpleNamespace(
++        llama_backend_init=lambda: None,
++        llama_model_default_params=lambda: SimpleNamespace(**_FAKE_PARAMS),
++    )
++    monkeypatch.setattr(llamacpp_backend, "_BACKEND_INITIALIZED", True)
++    params = llamacpp_backend._cpu_model_params(library)
++    assert params.n_gpu_layers == 0
++    assert params.load_mode == llamacpp_backend._LOAD_MODES[expected_mode]
++    assert params.use_extra_bufts is expected_bufts
++    # use_mmap/use_mlock were removed from llama_model_params in this llama.cpp;
++    # setting them on a ctypes struct is inert, so a regression here would be silent.
++    assert not hasattr(params, "use_mmap")
++    assert not hasattr(params, "use_mlock")
++
++
++def test_cpu_model_params_rejects_unknown_load_mode(monkeypatch):
++    from semif_phase1 import llamacpp_backend
++
++    monkeypatch.setenv("SEMIF_LLAMA_LOAD_MODE", "warp")
++    monkeypatch.setattr(llamacpp_backend, "_BACKEND_INITIALIZED", True)
++    library = SimpleNamespace(
++        llama_backend_init=lambda: None,
++        llama_model_default_params=lambda: SimpleNamespace(**_FAKE_PARAMS),
++    )
++    with pytest.raises(ValueError, match="SEMIF_LLAMA_LOAD_MODE"):
++        llamacpp_backend._cpu_model_params(library)
++
++
+ def test_restore_state_rejects_native_failure():
+     from semif_phase1.llamacpp_backend import _Engine
+ 
+diff --git a/tests/test_llamacpp_batched.py b/tests/test_llamacpp_batched.py
+new file mode 100644
+index 0000000..b4a0587
+--- /dev/null
++++ b/tests/test_llamacpp_batched.py
+@@ -0,0 +1,272 @@
++"""Batched branch scoring: the shared-state path that avoids one pass per criterion.
++
++These cover the two mechanisms that made scoring cost linear in the criteria
++count — a single-sequence context and a physical batch smaller than the branch
++group — plus the digest cache that stopped a cold run reading the checkpoint
++twice before scoring a token.
++"""
++import ctypes
++import json
++from pathlib import Path
++from types import SimpleNamespace
++
++import numpy
++import pytest
++
++from semif_phase1 import llamacpp_backend
++
++
++class _FakeBatch:
++    """Minimal stand-in for a llama_batch: indexable parallel arrays."""
++
++    def __init__(self, size):
++        self.token = [0] * size
++        self.pos = [0] * size
++        self.n_seq_id = [0] * size
++        self.seq_id = [[0] for _ in range(size)]
++        self.logits = [0] * size
++        self.n_tokens = 0
++
++
++class _FakeLibrary:
++    """Records every batch handed to llama_decode and returns per-index logits."""
++
++    def __init__(self, vocab_size=4):
++        self.batches = []
++        self.vocab_size = vocab_size
++        self._buffers = []
++
++    def llama_batch_init(self, n_tokens, embd, n_seq_max):
++        return _FakeBatch(n_tokens)
++
++    def llama_batch_free(self, batch):
++        pass
++
++    def llama_decode(self, context, batch):
++        self.batches.append(batch)
++        return 0
++
++    def llama_get_logits_ith(self, context, index):
++        # A distinct leading value per batch index, so the caller's mapping from
++        # batch slot to sequence can be checked rather than assumed.
++        values = [float(index)] + [0.0] * (self.vocab_size - 1)
++        buffer = (ctypes.c_float * self.vocab_size)(*values)
++        self._buffers.append(buffer)
++        return ctypes.cast(buffer, ctypes.POINTER(ctypes.c_float))
++
++
++def _engine(sequences=4, ubatch=4096, vocab_size=4):
++    engine = llamacpp_backend._Engine.__new__(llamacpp_backend._Engine)
++    engine.lib = _FakeLibrary(vocab_size)
++    engine.sequences = sequences
++    engine.ubatch = ubatch
++    engine.vocab_size = vocab_size
++    engine.memory = object()
++    engine.context = object()
++    return engine
++
++
++def test_batched_branches_ride_one_decode_with_per_sequence_positions():
++    engine = _engine()
++    logits = engine.branch_logits_batched([1, 2], [[9], [8, 7]])
++    (batch,) = engine.lib.batches
++    assert batch.n_tokens == 7
++    # Every branch restarts at position 0 because each owns its own KV.
++    assert batch.pos[:7] == [0, 1, 2, 0, 1, 2, 3]
++    assert [batch.seq_id[i][0] for i in range(7)] == [0, 0, 0, 1, 1, 1, 1]
++    # Exactly the last token of each branch is flagged for logits.
++    assert batch.logits[:7] == [0, 0, 1, 0, 0, 0, 1]
++    assert [row[0] for row in logits] == [2.0, 6.0]
++
++
++def test_batched_branches_still_flag_each_end_when_split_across_ubatches():
++    engine = _engine(ubatch=3)
++    logits = engine.branch_logits_batched([1, 2], [[9], [8, 7]])
++    # Three chunks of three, two and two; the second branch ends in the last one.
++    assert [batch.n_tokens for batch in engine.lib.batches] == [3, 3, 1]
++    assert [batch.logits[: batch.n_tokens] for batch in engine.lib.batches] == [
++        [0, 0, 1], [0, 0, 0], [1],
++    ]
++    # llama_get_logits_ith is indexed within its own decode, so the second
++    # branch — which ends at the start of the third chunk — comes back at 0.
++    assert [row[0] for row in logits] == [2.0, 0.0]
++    assert len(logits) == 2
++
++
++def test_batched_branches_sizes_a_whole_group_into_one_physical_batch():
++    assert llamacpp_backend._ubatch(8) == 4096
++    assert llamacpp_backend._ubatch(4) == 2048
++    # Never below llama.cpp's own default, even for a single branch.
++    assert llamacpp_backend._ubatch(1) == 512
++
++
++@pytest.mark.parametrize("cpus,expected", [
++    (12, 16),   # the host this was measured on; knee of the sweep
++    (8, 10),
++    (6, 8),
++    (4, 5),
++    (2, 4),     # never below the floor
++    (None, 5),  # falls back to a 4-core assumption, then the same 4/3 rule
++])
++def test_default_threads_oversubscribes_hardware_threads(monkeypatch, cpus, expected):
++    # A decode stalled on expert page faults wants more runnable threads than the CPU
++    # has, so the default is 4/3 of nproc rather than nproc.
++    monkeypatch.setattr(llamacpp_backend.os, "cpu_count", lambda: cpus)
++    assert llamacpp_backend._default_threads() == expected
++
++
++def test_score_shared_clears_between_groups_so_sequence_ids_can_be_reused(monkeypatch):
++    """More criteria than n_seq_max run as several groups over the same sequence ids.
++
++    Each branch carries the whole prompt, so positions restart at 0 for every group.
++    If a group does not release the previous group's cells first, reusing sequence 0
++    for a shorter prompt fails the decode outright — measured on the real checkpoint:
++    16 criteria against n_seq_max=8 raised "llama_decode failed" from group 2 onward.
++    """
++
++    class _FakeEngine:
++        def __init__(self):
++            self.sequences = 2
++            self.clears = 0
++            self.groups = []
++
++        def clear(self):
++            self.clears += 1
++
++        def branch_logits_batched(self, prefix, suffixes):
++            self.groups.append(len(suffixes))
++            return [numpy.asarray([0.0, 1.0, 2.0, 3.0]) + index
++                    for index in range(len(suffixes))]
++
++    class _FakeModel:
++        def __init__(self):
++            self.engine = _FakeEngine()
++
++        def encode_verified(self, row, max_tokens):
++            return [1, 2, 9], [0, 1], "hash"
++
++    monkeypatch.setattr(llamacpp_backend, "_state_prefix", lambda tokenizer, state: [1, 2])
++    model = _FakeModel()
++    rows = [
++        {"id": f"r{index}", "state": {"a": 1}, "question": "Which option?",
++         "options": [{"id": "a", "description": "A"}, {"id": "b", "description": "B"}]}
++        for index in range(5)
++    ]
++    results, timing = llamacpp_backend.score_shared(model, object(), rows, {}, 4096)
++    assert [row["id"] for row in results] == ["r0", "r1", "r2", "r3", "r4"]
++    # 5 rows over a 2-sequence context is 3 groups, and every one clears first.
++    assert model.engine.groups == [2, 2, 1]
++    assert model.engine.clears == 3
++    assert timing["batched_passes"] == 3
++    assert all(sum(row["probabilities"]) == pytest.approx(1.0) for row in results)
++
++
++@pytest.mark.parametrize("env,expected", [
++    ({}, 8),
++    ({"SEMIF_LLAMA_SEQ_MAX": "3"}, 3),
++])
++def test_seq_max_resolution(monkeypatch, env, expected):
++    for key, value in env.items():
++        monkeypatch.setenv(key, value)
++    assert llamacpp_backend._seq_max() == expected
++
++
++@pytest.mark.parametrize("name,value,message", [
++    ("SEMIF_LLAMA_SEQ_MAX", "many", "not an integer"),
++    ("SEMIF_LLAMA_SEQ_MAX", "0", "at least 1"),
++    ("SEMIF_LLAMA_UBATCH", "wide", "not an integer"),
++    ("SEMIF_LLAMA_UBATCH", "0", "at least 1"),
++    ("SEMIF_LLAMA_UBATCH_PER_SEQ", "0", "at least 1"),
++])
++def test_batch_controls_reject_bad_values(monkeypatch, name, value, message):
++    monkeypatch.setenv(name, value)
++    target = llamacpp_backend._seq_max if name.endswith("SEQ_MAX") else (
++        lambda: llamacpp_backend._ubatch(2)
++    )
++    with pytest.raises(ValueError, match=message):
++        target()
++
++
++def test_batched_branches_refuse_more_branches_than_the_context_holds():
++    engine = _engine(sequences=2)
++    with pytest.raises(ValueError, match="n_seq_max=2"):
++        engine.branch_logits_batched([1], [[9], [8], [7]])
++    assert engine.lib.batches == []
++
++
++@pytest.mark.parametrize("prefix,suffixes,message", [
++    ([1], [], "empty branch set"),
++    ([], [[9]], "empty prefix"),
++    ([1], [[]], "empty branch"),
++])
++def test_batched_branches_refuse_degenerate_input(prefix, suffixes, message):
++    engine = _engine()
++    with pytest.raises(ValueError, match=message):
++        engine.branch_logits_batched(prefix, suffixes)
++    assert engine.lib.batches == []
++
++
++def test_engine_sizes_context_for_the_branch_group(monkeypatch):
++    monkeypatch.setenv("SEMIF_LLAMA_SEQ_MAX", "4")
++    captured = {}
++
++    library = SimpleNamespace(
++        llama_context_default_params=lambda: SimpleNamespace(),
++        llama_init_from_model=lambda model, params: captured.update(vars(params)) or object(),
++        llama_get_memory=lambda value: object(),
++        llama_n_ctx=lambda value: 4096,
++        llama_model_get_vocab=lambda model: object(),
++        llama_n_vocab=lambda vocab: 8,
++    )
++    engine = llamacpp_backend._Engine(library, object(), 4096, 2, 4)
++    assert captured["n_seq_max"] == 4
++    assert captured["n_outputs_max"] == 4
++    # A group split across ubatches pays a full model sweep each, so the physical
++    # batch must be able to hold one whole group.
++    assert captured["n_ubatch"] == 2048
++    assert captured["n_batch"] == 2048
++    assert engine.ubatch == 2048
++
++
++def test_digest_cache_reuses_an_unchanged_checkpoint(tmp_path):
++    gguf = tmp_path / "model.gguf"
++    gguf.write_bytes(b"weights" * 64)
++    first, source = llamacpp_backend._gguf_digest(gguf)
++    assert source == "computed"
++    again, source = llamacpp_backend._gguf_digest(gguf)
++    assert (again, source) == (first, "cache")
++    # A change that alters neither size nor mtime is the one case the sidecar
++    # cannot see; anything else must rehash.
++    gguf.write_bytes(b"weights" * 128)
++    third, source = llamacpp_backend._gguf_digest(gguf)
++    assert source == "computed"
++    assert third != first
++
++
++def test_digest_can_be_forced_or_skipped(tmp_path, monkeypatch):
++    gguf = tmp_path / "model.gguf"
++    gguf.write_bytes(b"weights")
++    llamacpp_backend._gguf_digest(gguf)
++    monkeypatch.setenv("SEMIF_GGUF_DIGEST", "compute")
++    assert llamacpp_backend._gguf_digest(gguf)[1] == "computed"
++    monkeypatch.setenv("SEMIF_GGUF_DIGEST", "skip")
++    assert llamacpp_backend._gguf_digest(gguf) == ("", "skipped")
++    monkeypatch.setenv("SEMIF_GGUF_DIGEST", "sometimes")
++    with pytest.raises(ValueError, match="SEMIF_GGUF_DIGEST"):
++        llamacpp_backend._gguf_digest(gguf)
++
++
++def test_digest_survives_a_read_only_model_directory(tmp_path):
++    gguf = tmp_path / "model.gguf"
++    gguf.write_bytes(b"weights")
++    directory = tmp_path / "readonly"
++    directory.mkdir()
++    sealed = directory / "model.gguf"
++    sealed.write_bytes(b"weights")
++    directory.chmod(0o500)
++    try:
++        digest, source = llamacpp_backend._gguf_digest(sealed)
++        assert source == "computed"
++        assert len(digest) == 64
++    finally:
++        directory.chmod(0o700)
