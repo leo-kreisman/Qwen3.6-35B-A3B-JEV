@@ -78,6 +78,13 @@ The three changes, in order of size:
 3. **Batching the branches at all.** `n_seq_max = 1` made the context
    single-sequence, so `score_shared` serialised branches via save/restore — five
    full model passes for four criteria.
+4. **Residency — paying the load once** (`resident/`). `cli.py` is one-shot, so the
+   ~19.8 s load is paid on every call. Keeping the process alive is worth **~59 →
+   ~38.5 s per call (1.5×)**, and worth *only* the load: the decode read is flat at
+   41.07 / 41.09 / 41.08 GB across three calls, so there is no inter-call reuse to
+   collect. Item 1 and the read model are two faces of one device: at fixed tokens
+   more threads move time but not bytes (latency-bound), while at fixed threads
+   time tracks bytes at ~1.03 GB/s (bandwidth-bound).
 
 Caveat worth stating plainly: batching is right **only** in the I/O-bound regime.
 `qwen35moe` is a hybrid model whose `llama_memory_hybrid::seq_cp` **aborts**, so
@@ -155,21 +162,52 @@ Also retracted: moving the GGUF to NVMe was ranked as the cheapest win and was
 
 ## What is not solved
 
-- **The largest unattacked win is residency, and it does not exist.** `cli.py` is
-  one-shot (`load → score → exit`), so the 20.9 GB / ~19.8 s load — **33% of
-  per-call wall clock** — is paid on every call, and nothing carries over: calls 2
-  and 3 read the *same* 61.6 GB as call 1. A resident process gives 3 calls in
-  139.0 s against 180.0 s one-shot, **33.8% saved per call**, widening with call
-  count. A resident scorer is the next real move.
-- **Read amplification** (41 GB against an 18.33 GB expert set) needs a
-  weight-access rewrite: `pread` over exact expert extents with the engine owning
-  a bounded slot pool. That is the proven seam from the prior art.
+- **Read amplification** is the remaining cost, and it is two ~2.1× factors, not
+  one. For the 4-criterion fixture the routing selects about **9.3 GB** of expert
+  bytes (top-8 of 256, from the GGUF tensor table); the same run reads **19.3 GB**
+  at a 16 GiB cap (gather overfetch) and **41.0 GB** at 8 GiB (cap-driven
+  intra-pass re-read). Removing both needs the pass to visit experts in expert
+  order — fetch each selected slice once and use it for every token that wants it,
+  working set a few slices rather than the whole set. That is the proven seam from
+  the prior art: `pread` over exact expert extents with the engine owning a bounded
+  slot pool. It is a decode rewrite, not a flag; llama-cpp-python ships prebuilt
+  `.so` files, so it is a rebuild-and-patch project. See `resident/README.md`.
+- **`direct_io` is closed, not open.** It was listed as an untested load mode. Under
+  an 8 GiB cap it cannot load at all: `O_DIRECT` reads every tensor into allocated
+  buffers rather than mapping them, needs 20.88 GB of anonymous RAM, and is
+  SIGKILLed during `load_all_data` before scoring anything.
 - `--max-tokens` has not been measured.
+
+## Residency — solved
+
+`cli.py` is one-shot (`load → score → exit`), so the 20.9 GB / ~19.8 s load —
+**33% of per-call wall clock** — was paid on every call and nothing carried over:
+calls 2 and 3 read the *same* 61.6 GB as call 1. `resident/resident_scorer.py`
+keeps the process alive, and it is worth exactly the load and no more:
+
+| | load | decode read | wall |
+| --- | --- | --- | --- |
+| one-shot, per call | 18.9–20.4 s | 41.07 GB | ~59 s |
+| resident call 1 | 18.92 s | 41.07 GB | 40.27 s |
+| resident calls 2–3 | — | 41.09 / 41.08 GB | 38.52 / 38.90 s |
+
+**~59 s → ~38.5 s per call, 1.5×.** The decode read is *flat* across calls —
+41.069 / 41.090 / 41.083 GB — so there is zero inter-call reuse, and that is
+structural: a pass touches ~41 GB against an 8 GiB cap, so it evicts its own early
+pages before it finishes, and call 2 starts at layer 0 where nothing is warm.
+Scoring is unchanged (SemIf's own path, called as a library) and decision-identical.
+Batching against the shared state is the other available win: per-criterion read
+falls 17.5 GB at 1 criterion to 6.9 GB at 16, for up to **2.5× less I/O and 2.0×
+less time per criterion**, with no engine change.
 
 ## Repository layout
 
     SETUP.md                        install, run, and invoke it — start here
     run_semif_35b_ssd.sh            the operational runner (the tested path)
+    run_resident_35b_ssd.sh         resident runner: load once, serve many calls
+    resident/
+      resident_scorer.py            the resident scorer (library use or --serve)
+      README.md                     what residency buys, and what it does not
     patch/                          the SemIf change: diff + complete files + apply.sh
     docs/
       SEMIF_LLAMACPP_SSD.md         the main lab notebook, every measurement
@@ -179,6 +217,8 @@ Also retracted: moving the GGUF to NVMe was ranked as the cheapest win and was
     scripts/
       README.md                     which probe answers which question
       fetch_prior_art.sh            re-clone the twelve surveyed engines
+      sweep_resident.sh             the serial residency sweep (one process per knob)
+      analyze_sweep.py              fit the read model out of the ledger lines
       probes/                       the measurement scripts (19 files)
     examples/                       input JSONL fixtures
     results/                        output JSONL, the evidence for the tables above

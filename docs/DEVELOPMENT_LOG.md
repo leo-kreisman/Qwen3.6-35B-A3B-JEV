@@ -1,5 +1,97 @@
 # DEVELOPMENT_LOG
 
+## Session Handoff — 2026-09-22 (c) — residency, and pricing the read amplification
+
+### Goal
+
+Branch `resident-expert-serving`: implement the serving path that "leaves SemIf
+behind", and improve the measured results under the standing premise — **8 GiB RAM
+plus SSD**, no Apple Silicon lock-in.
+
+### Failed Paths
+
+1. **The duplicate-expert-storage hypothesis is dead.** `scripts/probes/gguf_tensor_layout.py`
+   reads only the header and tensor table: 733 tensors, extents sum to 20.88 GB against a
+   20.89 GB file, 0.0 MB unaccounted, **0 identical ranges and 0 partial overlaps**, and
+   only three routed suffixes per layer (`ffn_gate_exps` / `ffn_up_exps` / `ffn_down_exps`).
+   So the amplification is not double-stored weights, and `ffn_gate_up_exps` is an internal
+   fused *view*, not a second copy. Cost of learning this: one probe, plus a count printed
+   as `-40` because `"exps"` and `"shexp"` are distinct substrings, so the two filters do
+   not nest — read `len(experts) - len(shared)` and it looks negative.
+2. **Inter-call page reuse does not exist and cannot be engineered into existence.**
+   Three resident calls read **41.069 / 41.090 / 41.083 GB** — flat to 0.05%. The reason is
+   structural, not a tuning miss: a pass touches ~41 GB against an 8 GiB cap, so it evicts
+   its own early pages before it finishes, and call 2 then starts at layer 0 where nothing is
+   warm. Any plan that assumes residency compounds must die here.
+3. **`direct_io` is closed, not merely untested.** Listed as an open lever in two earlier
+   sessions. Under the 8 GiB cap it is **SIGKILLed during load** (exit 137): `O_DIRECT` reads
+   every tensor into allocated buffers instead of mapping them, needing
+   `CPU model buffer size = 19914.65 MiB` (20.88 GB) of anonymous RAM, and it dies in
+   `load_all_data` before writing a single ledger line. It is a load mode for hosts that can
+   hold the model, not for this regime.
+4. **`use_extra_bufts` (repack) stays dead** at this size — it needs the model resident.
+5. **`read_ahead_kb` stays dead** — WILLNEED is capped at ~128 KB; moved `read_bytes` by
+   0.14 GB. Re-confirmed as not worth retrying.
+6. **My own first read model was wrong.** "18.33 GB fixed sweep + 25.4 MB/token" rested on
+   two points and on the wrong token denominator. `branch_logits_batched` gives every branch
+   the *whole* prompt as its own sequence, so the honest counter is `batched_tokens`
+   (= suffix + prefix × rows), not `true_suffix_tokens`. Refit over four single-pass runs:
+   **read = 13.8 GB + 26.9 MB × token.**
+
+### Final Solution
+
+A resident scorer plus a strictly serial sweep, both measured cold under
+`systemd-run --scope -p MemoryMax=8G -p MemorySwapMax=0` with the checkpoint evicted
+once beforehand via `posix_fadvise(DONTNEED)`.
+
+**Residency buys the load, and exactly the load.** ~59 s → ~38.5 s per call (**1.5×**);
+`process_read_bytes` after call 1 was 61.96 GB, reproducing the published 61.6 GB, so the
+instrument agrees with the baseline it measures. Scoring is SemIf's own path called as a
+library — argmax and `full_vocab_argmax_id` identical on all four fixtures.
+
+**One correction I made to my own account, after measuring instead of asserting.**
+I first wrote here that probabilities differed from the committed baselines because those
+ran `threads=6` and this runs 16. **That is wrong.** The `threads=16` output is
+*bit-identical* to `results/decisions.batched.jsonl` on all four prompts, all 17 printed
+digits — thread count does not move these logits at all. The only spread in the whole set
+is *batched* vs the pre-batching single-sequence path: at most **0.001%** on the winning
+probability, no decision changed. That difference is the earlier batching patch, not this
+work, but this path depends on batching so it is disclosed rather than implied. And the
+lossless claim is weaker than it sounds: all four fixtures sit at p ≈ 0.99998 for the
+winner, so a near-tie fixture would be the real test and there is none in `examples/`.
+
+**Batching is the other available win, and it is free.** Per-criterion read falls
+17.5 → 10.3 → 8.0 → 6.9 GB for 1 / 4 / 8 / 16 criteria (up to **2.5× less I/O, 2.0× less
+time per criterion**), because the marginal token gets *cheaper* as the batch grows
+(35.9 → 25.4 MB/token) — the fixed term is genuinely shared. It needs `SEQ_MAX` to cover the
+batch: a 16-criterion batch at `SEQ_MAX=8` pays two full sweeps.
+
+**`SEQ_MAX ≥ batch width` is correct but small:** 128.3 → 110.2 GB and 127.1 → 119.96 s
+(**1.06×**) — the saving is exactly one sweep's worth of bytes, but the single 8192-wide
+ubatch runs at 0.92 GB/s against 1.01 GB/s, so 14% of the bytes buys 6% of the time.
+
+**The amplification is two ~2.1× factors, and the cap table separates them** (top-8 of 256,
+confirmed from the GGUF): the routing selects ~**9.3 GB** of expert bytes for the 4-criterion
+fixture; the same run reads **19.3 GB** at a 16 GiB cap (gather overfetch) and **41.0 GB** at
+8 GiB (cap-driven intra-pass re-read). Removing both is worth **2.1× conservatively, ~4.4× if
+overfetch also falls** — at the same 8 GiB, with no extra RAM. It needs an expert-ordered
+decode: group the batch's tokens by selected expert, fetch each slice once, use it for every
+token that wants it, drop it.
+
+### Unresolved
+
+- **The expert-ordered decode is not started.** It is the only remaining lever on the read
+  axis, and it is a decode rewrite, not a flag: llama-cpp-python 0.3.35 ships prebuilt `.so`
+  files, so it is a rebuild-and-patch project. Every working engine in the twelve-engine
+  survey does exactly this; none of them is a llama.cpp flag.
+- **The ~2.1× overfetch is inferred from the cap table, not directly observed.** Confirming
+  it needs per-layer read tracing.
+- **A smaller quant is an untested lever with a real number behind it.** The expert set
+  scales with bpw and the amplification is cap-driven, so a ~25% smaller expert set should
+  cut reads ~25–33%. Not tested: it trades answer quality, and that is the user's call.
+- `--max-tokens` has never been measured.
+- **Committed on the branch only — not pushed.**
+
 ## Session Handoff — 2026-09-22 (b) — publishing the repo: setup.md, patch, prior art
 
 ### Goal
