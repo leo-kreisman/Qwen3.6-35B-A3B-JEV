@@ -1,5 +1,76 @@
 # DEVELOPMENT_LOG
 
+## Session Handoff — 2026-09-22 (b) — publishing the repo: setup.md, patch, prior art
+
+### Goal
+
+Publish all of it — a `setup.md` an agent can follow, the scripts, and every research file —
+to `https://github.com/leo-kreisman/Qwen3.6-35B-A3B-JEV`.
+
+### Failed Paths
+
+1. **`gh` is not installed**, so there was no CLI to create or inspect the repo.
+   Not a blocker in the end: the repo already existed and was **empty**, and
+   `git-credential-manager` is configured globally (ten repos already push to
+   `leo-kreisman`), so plain `git push` was the whole answer.
+2. **My first reachability check lied to me.** `git ls-remote … | head -5; echo $?` reports
+   *head's* exit status, which is always 0, so the empty output was ambiguous between "empty
+   repo" and "error swallowed". Re-run **without the pipe**: exit 0, no stdout, no stderr —
+   that is the signature of an existing empty repo. Check the thing, not the pipe.
+3. **`results/decisions.one.jsonl` is not a result.** Its keys are
+   `id/options/question/state` — it is the one-criterion *input* fixture, and it had been filed
+   with the outputs. Moved to `examples/` after checking every file's keys rather than its name.
+4. **Vendoring `semif/` was the obvious move and the wrong one** — see below.
+5. **Git identity is configured nowhere** (`git config --list --show-origin` → no
+   `user.name`/`user.email`), so the first commit would have failed outright. Took the identity
+   from `MiniCPM5-2B`'s *local* config rather than inventing one.
+
+### Final Solution
+
+**SemIf is published as a patch, not a fork.** `semif/` is a clone of `TheoLeeCJ/SemIf`
+(MIT, Copyright (c) 2026 TheoLeeCJ) with three files modified. Committing it would have meant
+either carrying a foreign history into this repo or silently forking someone else's project.
+`patch/` instead holds a **754-line diff against pinned commit `1f2dea3`**, the three complete
+post-patch files for drop-in use, and `apply.sh`. The diff's exactness was verified by
+`git apply --check -R` against the working tree — it reverse-applies, so it describes the tree
+precisely, and the working tree was left untouched (`git reset` after `git add -N`).
+
+- **The 12 surveyed engines and `edge0/` are not vendored** (474 MB of other people's code).
+  `scripts/fetch_prior_art.sh` re-clones each at the pinned commit that was actually read, so
+  every claim in the survey stays checkable without redistributing anything.
+- **19 probes rescued from `/tmp`** into `scripts/probes/`, with a README mapping each probe to
+  the question it answers. They were a `/tmp` cleanup away from being lost, and they are the
+  evidence — four of the findings in §6c exist *because* a probe was written to disprove a
+  hypothesis already written down.
+- **The runner was generalized.** It had `/home/scribe/...` hardcoded in six places, so it would
+  not have run for anyone else. Now env-overridable with repo-relative defaults. Every hard-won
+  comment was kept; they carry more than the code does.
+- **The framing was corrected in the deliverable, not just in conversation.** README.md and
+  SETUP.md both state up front that **nothing is generated** — 23/27/28 tok/s is *prompt-prefill*
+  throughput for a classifier, against 15.1 one-shot / 23.0 resident end-to-end including the
+  load. A repo whose headline could be read as "27 tokens/s of output from SSD" would mislead
+  every reader who acted on it.
+- **`probability_status` is surfaced to the agent author.** The field literally reads
+  "uncalibrated as decision confidence"; SETUP.md quotes it and says to rank on it, not threshold
+  it. `full_vocab_argmax_id` is documented as the cheap sanity check that the model's preferred
+  token was one of the offered options.
+- **Published:** 48 files, 310 KB, commit `b25fd22` — no `semif/`, `edge0/`, `offload_projects/`,
+  `.venv`, weights, or `INVALID-*.jsonl`. Secret-scanned first (clean).
+
+### Unresolved
+
+- **Read amplification** — 41 GB against an 18.33 GB expert set. Needs the weight-access rewrite
+  (`pread` over exact expert extents, engine-owned bounded slot pool), which is the seam every
+  working prior-art engine uses.
+- **No resident scorer.** The one-shot CLI re-pays a 19.8 s load every call — 33% of wall clock —
+  and nothing carries over between calls (calls 2 and 3 read the same 61.6 GB). A resident
+  process saved 33.8% per call over three calls. This is the largest unattacked win, and it is
+  still only sketched by `scripts/probes/probe_lifecycle.py`.
+- **`--max-tokens` is still unmeasured.** It is now the last unmeasured lever.
+- **The repo is published but the push has not been independently re-verified** — the check was
+  blocked by a transient classifier denial, so the evidence is the push's own output
+  (`* [new branch] main -> main`, exit 0). Re-confirm with `git ls-remote origin` next session.
+
 ## Session Handoff — 2026-09-22 — deployment-shaped tests: lifecycle, contention, budget, scaling
 
 ### Goal
