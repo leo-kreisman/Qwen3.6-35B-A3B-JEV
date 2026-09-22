@@ -1,0 +1,80 @@
+{
+  "input_MB": 48.0,
+  "source": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-UD-Q4_K_S.gguf",
+  "raw_bytearray_copy_MBs": 2217.8,
+  "zstd3_whole": {
+    "compressed_pct_of_raw": 85.47,
+    "decomp_MBs": 846.5,
+    "sec_per_212.6MB_out": 0.2512
+  },
+  "zstd9_whole": {
+    "compressed_pct_of_raw": 85.05,
+    "decomp_MBs": 851.3,
+    "sec_per_212.6MB_out": 0.2497
+  },
+  "zstd3_frames4M": {
+    "compressed_pct_of_raw": 85.42,
+    "decomp_MBs": 943.2,
+    "sec_per_212.6MB_out": 0.2254
+  },
+  "zstd3_frames4M_par4": {
+    "compressed_pct_of_raw": 85.42,
+    "decomp_MBs": 4465.0,
+    "sec_per_212.6MB_out": 0.0476
+  },
+  "zstd3_frames4M_par8": {
+    "compressed_pct_of_raw": 85.42,
+    "decomp_MBs": 5284.9,
+    "sec_per_212.6MB_out": 0.0402
+  },
+  "zstd9_frames4M": {
+    "compressed_pct_of_raw": 85.06,
+    "decomp_MBs": 972.4,
+    "sec_per_212.6MB_out": 0.2186
+  },
+  "zstd9_frames4M_par4": {
+    "compressed_pct_of_raw": 85.06,
+    "decomp_MBs": 4447.5,
+    "sec_per_212.6MB_out": 0.0478
+  },
+  "zstd9_frames4M_par8": {
+    "compressed_pct_of_raw": 85.06,
+    "decomp_MBs": 5195.0,
+    "sec_per_212.6MB_out": 0.0409
+  },
+  "lz4_frames4M": {
+    "compressed_pct_of_raw": 92.58,
+    "decomp_MBs": 2063.8,
+    "sec_per_212.6MB_out": 0.103
+  },
+  "lz4_frames4M_par4": {
+    "compressed_pct_of_raw": 92.58,
+    "decomp_MBs": 6775.4,
+    "sec_per_212.6MB_out": 0.0314
+  },
+  "lz4_frames4M_par8": {
+    "compressed_pct_of_raw": 92.58,
+    "decomp_MBs": 6998.1,
+    "sec_per_212.6MB_out": 0.0304
+  },
+  "stream_fp16_d_dmin": {
+    "share_pct_of_file": 2.778,
+    "compressed_pct_of_raw": 64.87,
+    "decomp_MBs": 995.2
+  },
+  "stream_packed6": {
+    "share_pct_of_file": 8.333,
+    "compressed_pct_of_raw": 76.25,
+    "decomp_MBs": 1653.9
+  },
+  "stream_payload": {
+    "share_pct_of_file": 88.889,
+    "compressed_pct_of_raw": 84.5,
+    "decomp_MBs": 860.5
+  },
+  "meta_streams_combined": {
+    "share_pct_of_file": 11.111,
+    "compressed_pct_of_raw": 73.46,
+    "file_size_reduction_if_payload_raw_pct": 2.95
+  }
+}

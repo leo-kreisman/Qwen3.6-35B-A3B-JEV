@@ -54,10 +54,11 @@ model output beyond a label and a probability.
 The tokenizer is fetched from `Qwen/Qwen3.6-35B-A3B` on Hugging Face by the
 runner on first use, and is likewise governed by its own license.
 
-## The twelve surveyed engines — surveyed, not redistributed
+## The surveyed engines — surveyed, not redistributed
 
-`docs/OFFLOAD_PROJECTS_ANALYSIS.md` is a survey of twelve existing
-MoE-offload/SSD-streaming engines. Their source trees are excluded from this
+`docs/OFFLOAD_PROJECTS_ANALYSIS.md` surveys **twelve cloned** existing
+MoE-offload/SSD-streaming repositories — **~9 distinct engines** once two forks and one
+stub are deduplicated. Their source trees are excluded from this
 repository (`offload_projects/` in `.gitignore`); `scripts/fetch_prior_art.sh`
 re-clones each one at the commit that was read, so the survey can be re-checked
 without this repository redistributing anyone's code. Each remains under its own

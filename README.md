@@ -14,18 +14,17 @@ probability per option. One pass, one logit vector. It is a **classifier**.
 
 ## Read this first: what the numbers mean
 
-**No tokens are generated. Nothing is decoded autoregressively.** The scorer runs
+**The scorer generates no tokens. Nothing is decoded autoregressively.** It runs
 a *prefill* over a fixed prompt and reads the logits of the option-label tokens.
 So every `tok/s` figure below is **prompt-prefill throughput** — token-forwards
-per second — not generation speed. A 35B MoE *generating* text from SSD would be
-a different and much worse story; that is not what this does.
+per second — not generation speed.
 
 The distinction is not pedantic, because prefill and generation are opposite
 cases for SSD streaming:
 
 | | experts touched per layer | SSD behaviour |
 | --- | --- | --- |
-| **prefill** (what this does) | most of 256 | SSD-hostile |
+| **prefill** (what the scorer does) | most of 256 | SSD-hostile |
 | **generation** | ~8 | easy |
 
 The scorer sits in the *hostile* case and still lands at 23–29 token-forwards/s.
@@ -33,6 +32,27 @@ Presenting that as "27 tokens per second of output" would be a large
 overstatement, so: **23/27/28 tok/s is per-pass prefill throughput.** End-to-end
 per call, including the model load, it is **15.1 tok/s one-shot** and **23.0
 resident** — and on a busy workstation, **~74 s per call**.
+
+### Generation, measured (2026-09-22)
+
+Generation was previously unmeasurable here because **no generation code
+existed** — `--max-tokens` is an *input* prompt cap, not a generation length.
+`scripts/probes/probe_decode.py` closes that, and the first real decode numbers
+are:
+
+| run | tok/s | MB read per token |
+| --- | --- | --- |
+| cold, cache evicted, **8 GiB cap verified binding** | **3.67** | **212.6** |
+| warm, checkpoint page-cached | **10.68** | 0 |
+
+So the honest reading: **the scorer path is the fast path.** A typed decision
+costs one prefill whether it has 2 options or 255; generating the same answer as
+text would pay 212.6 MB *per token*. That is why `resident/systemone_shim.py`
+implements the TypeSafe System One contract directly instead of prompting a
+generation — point `TYPESAFE_BASE_URL` at it and the local SSD-served model
+becomes a drop-in provider.
+
+The predicted ceiling was 2.4 GB/s ÷ 566 MB/token ≈ 4.2 tok/s; cold lands at 3.67.
 
 ---
 
@@ -69,7 +89,7 @@ The three changes, in order of size:
    12 → 47.87, **16 → 38.44**, 20 → 38.42. Knee at **4/3 of hardware threads**.
    Read volume is flat across the sweep (41.2–42.1 GB) — which is itself the
    evidence that the decode is **not** purely I/O-bound, contrary to what the
-   earlier work concluded. Not in any of the twelve surveyed engines.
+   earlier work concluded. Not in any of the surveyed engines.
 2. **`n_ubatch`, not `n_batch`, decides I/O.** A decode carrying more tokens than
    `n_ubatch` splits into physical ubatches, and *each* re-walks all 40 layers and
    re-reads their experts. llama.cpp's default 512 silently split the 908-token
@@ -139,8 +159,9 @@ fit boundary**.
 
 ## What was measured and rejected
 
-Twelve existing MoE-offload / SSD-streaming engines were surveyed
-(`docs/OFFLOAD_PROJECTS_ANALYSIS.md`). Every one that works uses `pread` against a
+Twelve existing MoE-offload / SSD-streaming repositories were cloned and surveyed
+(`docs/OFFLOAD_PROJECTS_ANALYSIS.md`); deduplicating two forks and one stub that is **~9
+distinct engines**. Every one that works uses `pread` against a
 per-expert offset table with a bounded slot pool; the mmap-based ones are the slow
 ones. Four plausible optimisations were tested here and are **dead ends** — they
 are written down so nobody re-tries them:
@@ -176,7 +197,8 @@ Also retracted: moving the GGUF to NVMe was ranked as the cheapest win and was
   an 8 GiB cap it cannot load at all: `O_DIRECT` reads every tensor into allocated
   buffers rather than mapping them, needs 20.88 GB of anonymous RAM, and is
   SIGKILLed during `load_all_data` before scoring anything.
-- `--max-tokens` has not been measured.
+- `--max-tokens` (the *input* prompt cap) has not been tuned. It is not a
+  generation length — see "Generation, measured" above.
 
 ## Residency — solved
 
@@ -200,6 +222,31 @@ Batching against the shared state is the other available win: per-criterion read
 falls 17.5 GB at 1 criterion to 6.9 GB at 16, for up to **2.5× less I/O and 2.0×
 less time per criterion**, with no engine change.
 
+## Serving typed decisions — the System One endpoint
+
+`resident/systemone_shim.py` serves **JEV's own contract** locally:
+
+    POST /v1/systemone   {"model", "state", "questions"} -> {"model", "answers", "usage"}
+    GET  /v1/models
+
+All three question types are implemented, each returning the shape the contract
+specifies: `noul` (a float, no confidence, no probabilities), `choice`
+(winner + confidence + probabilities over the caller's own keys, up to 255), and
+`score` (a probability-weighted mean over an ordered level array, plus a `legend`
+keyed by level index). Invalid requests return **422 `invalid_request`**;
+`usage.output_tokens` is **0 by construction**, because nothing is generated and
+every string returned is the caller's own text echoed back. Extras live under a
+non-conflicting top-level `local` key, including `cache_state`, which says
+whether the call was served from page cache or from NVMe.
+
+Point the documented extension variable at it and nothing downstream needs a fork:
+
+    python resident/systemone_shim.py --gguf <gguf> --model <tokenizer-dir> --port 8123 &
+    export TYPESAFE_BASE_URL=http://127.0.0.1:8123
+
+Calls are **serialised** — one llama.cpp context, one call at a time — which is
+the honest shape of a single-box SSD-streamed model.
+
 ## Repository layout
 
     SETUP.md                        install, run, and invoke it — start here
@@ -207,16 +254,18 @@ less time per criterion**, with no engine change.
     run_resident_35b_ssd.sh         resident runner: load once, serve many calls
     resident/
       resident_scorer.py            the resident scorer (library use or --serve)
+      systemone_shim.py             the TypeSafe System One endpoint (typed answers)
+      test_systemone_shim.py        end-to-end test for it: 26 contract checks
       README.md                     what residency buys, and what it does not
     patch/                          the SemIf change: diff + complete files + apply.sh
     docs/
       SEMIF_LLAMACPP_SSD.md         the main lab notebook, every measurement
-      OFFLOAD_PROJECTS_ANALYSIS.md  the survey of twelve engines, and the rankings
+      OFFLOAD_PROJECTS_ANALYSIS.md  the survey of the cloned engines (~9 distinct), rankings
       qwen3.6-35b-a3b-ssd-offload.md  the original design note
       DEVELOPMENT_LOG.md            session handoffs, including failed paths
     scripts/
       README.md                     which probe answers which question
-      fetch_prior_art.sh            re-clone the twelve surveyed engines
+      fetch_prior_art.sh            re-clone the 12 surveyed repositories
       sweep_resident.sh             the serial residency sweep (one process per knob)
       analyze_sweep.py              fit the read model out of the ledger lines
       probes/                       the measurement scripts (19 files)

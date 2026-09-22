@@ -1,0 +1,79 @@
+{
+  "gguf": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-UD-Q4_K_S.gguf",
+  "gguf_version": 3,
+  "tensor_type_histogram": {
+    "14": 4,
+    "0": 361,
+    "8": 251,
+    "12": 117
+  },
+  "n_quantized_expert_tensors": 120,
+  "expert_quant_bytes_GB": 18.327,
+  "nonexpert_quant_bytes_GB": 0.417,
+  "zstd_level": 6,
+  "sample_mb_per_tensor": 3.0,
+  "tensors_measured": [
+    {
+      "tensor": "blk.0.ffn_down_exps.weight",
+      "type": 12,
+      "blocks_sampled": 20833,
+      "blocks_total": 1048576
+    },
+    {
+      "tensor": "blk.0.ffn_gate_exps.weight",
+      "type": 12,
+      "blocks_sampled": 20833,
+      "blocks_total": 1048576
+    },
+    {
+      "tensor": "blk.0.ffn_up_exps.weight",
+      "type": 12,
+      "blocks_sampled": 20833,
+      "blocks_total": 1048576
+    },
+    {
+      "tensor": "blk.1.ffn_down_exps.weight",
+      "type": 12,
+      "blocks_sampled": 20833,
+      "blocks_total": 1048576
+    }
+  ],
+  "bytes_sampled_total": 11999808,
+  "streams": {
+    "fp16_d_dmin": {
+      "raw_bytes": 333328,
+      "pct_of_total": 2.778,
+      "order0_entropy_bits_per_byte": 5.4487,
+      "entropy_floor_ratio": 1.4682,
+      "zstd_ratio": 1.5804,
+      "zstd_pct_of_raw": 63.27,
+      "lz4_ratio": 1.2231,
+      "byte_plane_zstd_ratio": 1.7843,
+      "byte_plane_zstd_pct_of_raw": 56.04
+    },
+    "packed6_scales_mins": {
+      "raw_bytes": 999984,
+      "pct_of_total": 8.333,
+      "order0_entropy_bits_per_byte": 6.224,
+      "entropy_floor_ratio": 1.2853,
+      "zstd_ratio": 1.3804,
+      "zstd_pct_of_raw": 72.44,
+      "lz4_ratio": 1.2377,
+      "byte_plane_zstd_ratio": 1.376,
+      "byte_plane_zstd_pct_of_raw": 72.67
+    },
+    "q4_payload": {
+      "raw_bytes": 10666496,
+      "pct_of_total": 88.889,
+      "order0_entropy_bits_per_byte": 6.9623,
+      "entropy_floor_ratio": 1.1491,
+      "zstd_ratio": 1.2432,
+      "zstd_pct_of_raw": 80.44,
+      "lz4_ratio": 1.1019,
+      "byte_plane_zstd_ratio": 1.2486,
+      "byte_plane_zstd_pct_of_raw": 80.09
+    }
+  },
+  "whole_sample_zstd_pct": 79.3,
+  "whole_sample_plane_zstd_pct": 78.81
+}

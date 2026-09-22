@@ -1,5 +1,88 @@
 # DEVELOPMENT_LOG
 
+## Session Handoff — 2026-09-22 (d) — the first decode number, and a working System One endpoint
+
+### Goal
+
+Four things, in the order they were asked for: (1) **measure generation**, which had never
+been done; (2) the **research mandate** — decompose the architecture into ~10 parts and find,
+for each part, where the same primitive is solved better elsewhere and what is importable;
+(3) **use JEV**, i.e. wire the typed-decision path up so the cheap path is actually reachable;
+(4) do (3) **properly, not crude** — and do not stop until it works end to end.
+
+### Failed Paths
+
+1. **The `subprocess.PIPE` deadlock — the whole "shim never became healthy" failure.**
+   `test_systemone_shim.py` started the shim with `stdout=subprocess.PIPE` and drained that
+   pipe only *after* `server.poll()` returned non-None. The checkpoint load prints ~800 lines
+   of llama.cpp loader output, which filled the 64 KiB pipe buffer, so the shim **blocked on
+   write before it ever bound the socket** — and the process therefore never exited, so the
+   drain never happened either. It presented as "shim never became healthy" plus a **masked
+   exit 0** (the run was piped through `| tail -70`). Diagnosis took a foreground run with
+   the shim's own output going to a file, where it loaded normally in ~3 s. Fix: log to a
+   file, `tail` it only on failure, and close it in `finally`.
+2. **`ThreadingHTTPServer` over a non-thread-safe llama.cpp context** — the first draft of
+   the shim. One context, many request threads. Fixed with a module-level `call_lock` around
+   `scorer.call(rows)`, and the endpoint now advertises that calls are **serialised**.
+3. **Two contract shapes I guessed instead of reading.** `score.criteria` is an **ordered
+   array** of level descriptions, not a numeric-keyed map; and `state` is **not necessarily a
+   string** — it may be a string, an object, or an array of strings. Both were wrong in the
+   first draft and both are now handled, with the array form treated as canonical.
+4. **`--max-tokens` was called "the last unmeasured lever" for decode. False.** Grep showed
+   **no generation code existed in the project at all**; `--max-tokens` is an *input* prompt
+   cap. Generation was not under-measured, it was *unreachable* — there was no decode loop.
+5. **My "arithmetically impossible" claims about Edge0's prefill figure — retracted.**
+   3,300 tok at 113 tok/s is 29.2 s, so even a full 20.88 GB read is 0.72 GB/s, ~7× under an
+   M4 Pro SSD. Corrected in `DEVELOPMENT_LOG.md` and `SEMIF_LLAMACPP_SSD.md` §4. Both numbers
+   are also on a 24 GB page-cached box, so the honest like-for-like is **our warm 10.68 vs
+   Edge0's 14.9 — 1.4×, not 3.5×**.
+
+### Final Solution
+
+**1. Generation, measured — `scripts/probes/probe_decode.py` + `run_decode.sh`.** Cold, page
+cache evicted, under an **8 GiB cap verified binding** (`memory.peak` exactly 8 GiB,
+`memory.events max` 25,499): **3.67 tok/s at 212.6 MB per generated token**; prefill 25 tok in
+7.52 s reading 9.82 GB; load 19.87 s; 44.32 GB total process read. Warm, no cap: **10.68 tok/s,
+0 bytes read**. The 4.2 tok/s ceiling I had computed from 2.4 GB/s ÷ 566 MB/token was sound and
+the measurement lands under it.
+
+**2. The decomposition — `docs/ARCHITECTURE-DECOMPOSITION.md`.** Eleven parts, each with
+Primitive / Who else solves it / Best-in-class / Import / Evidence. The load-bearing findings:
+io_uring qd=128 at **3,807 MiB/s** vs sync `pread` 111 MiB/s — and our 4/3-nproc result is the
+*substitute* for missing queue depth, not a law; **W-TinyLFU** (ARC is IBM-patented, excluded);
+the **QStore/ZipNN** correction that our rANS dead-end tested the wrong stream (the 4-bit
+quants are incompressible, the **fp16 scales/mins are not**); and **speculative verification**
+(SpecMoE ~2.25× on SSD, 76.73% transfer reduction) as the highest-leverage import — it attacks
+the measured 212.6 MB/token directly and **none of the surveyed engines does it**. Plus the
+necessary counterweight: SSD offload costs up to **12× the per-token energy** of HBM.
+
+**3. A working System One endpoint — `resident/systemone_shim.py`.** Serves `POST /v1/systemone`
+and `GET /v1/models` with all three question types in their exact contract shapes (`noul`
+returns a bare float with no confidence; `choice` returns a caller key + probabilities; `score`
+returns a probability-weighted mean over ordered levels + `legend` keyed by index-as-string).
+422 `invalid_request` on invalid input, `usage.output_tokens` **0 by construction**, extras
+under a non-conflicting `local` key. `resident/test_systemone_shim.py` passes **26/26** checks
+against the real checkpoint, including a semantic winner check (`e1`, the empty destination
+input), all four validation cases, and `state` as string, object and array.
+
+**Why this is the answer to "JEV is to make it faster":** a decision is **one prefill pass**
+whose cost does not grow with the option count, while generating the same answer would pay
+**212.6 MB and ~0.27 s per token**. The scorer path is not a compromise against generating —
+it is strictly the cheaper route to the same typed answer.
+
+### Unresolved
+
+- **We still do not beat Edge0.** 10.68 warm vs 14.9 — a **1.4×** gap, and it is an
+  **algorithm** (prerouter + fixed staged slots), not a platform, so it ports to llama.cpp.
+  Not started.
+- **Prefill prefetch is unsolved everywhere.** Every published prefetcher (GrASP, Pythia,
+  SeLeP) is decode-time; our expensive case is prefill, where a one-token lookahead is
+  useless. The prior art is silent on it.
+- **Nothing is pushed.** The working tree has the new probe, the shim, the test and the doc
+  corrections; no commit or push was made this session.
+- **The shim has no auth.** Errors are modelled (401/429/529 documented) but unimplemented;
+  it binds `127.0.0.1` only, which is the reason it is acceptable for now.
+
 ## Session Handoff — 2026-09-22 (c) — residency, and pricing the read amplification
 
 ### Goal
@@ -82,14 +165,19 @@ token that wants it, drop it.
 
 - **The expert-ordered decode is not started.** It is the only remaining lever on the read
   axis, and it is a decode rewrite, not a flag: llama-cpp-python 0.3.35 ships prebuilt `.so`
-  files, so it is a rebuild-and-patch project. Every working engine in the twelve-engine
-  survey does exactly this; none of them is a llama.cpp flag.
+  files, so it is a rebuild-and-patch project. Every working engine in the survey does
+  exactly this; none of them is a llama.cpp flag.
 - **The ~2.1× overfetch is inferred from the cap table, not directly observed.** Confirming
   it needs per-layer read tracing.
 - **A smaller quant is an untested lever with a real number behind it.** The expert set
   scales with bpw and the amplification is cap-driven, so a ~25% smaller expert set should
   cut reads ~25–33%. Not tested: it trades answer quality, and that is the user's call.
 - `--max-tokens` has never been measured.
+  **Correction (2026-09-22, session d):** this was written as if `--max-tokens` were the
+  remaining *generation* lever. It is not — it is an **input prompt cap**. Generation was
+  unmeasured because **no generation code existed** in the project, not because a knob was
+  unturned. It is now measured: **3.67 tok/s cold at 212.6 MB/token under a binding 8 GiB
+  cap, 10.68 warm** (`scripts/probes/probe_decode.py`).
 - **Committed on the branch only — not pushed.**
 
 ## Session Handoff — 2026-09-22 (b) — publishing the repo: setup.md, patch, prior art
@@ -651,8 +739,16 @@ expensive case and 16 s is the *cheap* end.
 2. **Prefill is the expensive case, not decode.** Decode touches ~8 experts/layer/token
    (SSD-friendly); prefill over N tokens touches most of 256 experts/layer (SSD-hostile).
    SemIf reads decision logits from a **prefill**, so a JEV decision sits in the worst
-   case. This also re-reads Edge0's 113–140 tok/s cold-prefill claim as arithmetically
-   implausible for a full-model read per pass.
+   case.
+   **Retraction (2026-09-22):** this entry previously added "This also re-reads Edge0's
+   113–140 tok/s cold-prefill claim as arithmetically implausible for a full-model read
+   per pass." **That is wrong and is withdrawn.** 3,300 tokens at 113 tok/s is 29.2 s; a
+   full 20.88 GB read in that window is 0.72 GB/s, roughly **7× under** an M4 Pro's SSD.
+   The figure was never impossible. Edge0's actual mechanism is `staged_k4()`'s four fixed
+   expert slots plus a 33-head prerouter, which engineer away the per-token full routed-set
+   read — the same conclusion as `SEMIF_LLAMACPP_SSD.md` §5. Both numbers are also on a
+   24 GB machine with the checkpoint effectively page-cached, so the like-for-like row is
+   our **warm 10.68 tok/s vs Edge0's 14.9**, not a 3.5× gap.
 
 3. **`--max-tokens` default is 4096** — a hard prompt cap that a DOM snapshot will
    exceed. Script defaults to 8192; needs real tuning, since raising it grows KV memory

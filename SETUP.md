@@ -3,9 +3,11 @@
 How to install, run, and invoke the scorer. Written for the case this was built
 for: **a coding agent calling it as a tool on a shared workstation.**
 
-Read `README.md` first for what the numbers mean — in particular that nothing is
-generated and the `tok/s` figures are prefill throughput. This file is the
-operational path only.
+Read `README.md` first for what the numbers mean — in particular that the scorer generates
+nothing and the `tok/s` figures are prefill throughput. Generation itself *has* now been
+measured separately (cold **3.67 tok/s** at 212.6 MB/token under a binding 8 GiB cap, warm
+**10.68**; see "Generation, measured" in `README.md`) — which is exactly why the scorer path
+is the one to use. This file is the operational path only.
 
 ---
 
@@ -139,6 +141,33 @@ For `read_bytes` you need the process, and the CLI exits before you can read
 ---
 
 ## Invoking it from an agent
+
+### The easy path — the System One endpoint
+
+If your caller already speaks the JEV / TypeSafe System One contract, you do not need
+the JSONL path at all. `resident/systemone_shim.py` serves it locally:
+
+```sh
+SEMIF_LLAMA_LOAD_MODE=mmap SEMIF_LLAMA_EXTRA_BUFT=0 \
+  ./semif/.venv/bin/python resident/systemone_shim.py \
+    --gguf "$GGUF" --model "$TOK" --port 8123 &
+
+curl -s localhost:8123/health
+export TYPESAFE_BASE_URL=http://127.0.0.1:8123     # the documented extension point
+```
+
+`POST /v1/systemone` takes `{"model", "state", "questions"}` and returns typed answers for
+all three question types — `noul`, `choice`, `score` — with `usage.output_tokens` **0 by
+construction**, because nothing is generated. `state` may be a string, an object, or an
+array of strings. Invalid input returns **422 `invalid_request`**. Nothing downstream needs
+a fork: `typesafe-sdk`, Pydantic AI's `TypeSafeProvider`, `jevgrep`, and `omp`'s
+`api: typesafe` provider all reach it through that one variable.
+
+Calls are **serialised** — one llama.cpp context, one call at a time.
+
+Gate it with `resident/test_systemone_shim.py` (26 checks; exits non-zero on any mismatch).
+
+### Or drive it directly — one JSON object per line
 
 ### Input — one JSON object per line
 

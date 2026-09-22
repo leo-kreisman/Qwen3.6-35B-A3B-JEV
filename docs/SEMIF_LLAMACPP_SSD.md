@@ -206,11 +206,19 @@ SemIf reads decision logits from a **prefill**. A JEV decision is therefore the
 default is **4096**, and a DOM snapshot will exceed it. The script defaults to 8192 and
 will need tuning upward.
 
-This is also the honest re-read of Edge0's 113–140 tok/s cold prefill claim: at ~3.3k
-tokens that figure is arithmetically impossible if the whole ~20 GB model is read per
-pass. Its `prerouter` predicts the *next token's* routing one token ahead so expert
-loading overlaps generation (`docs/prerouter.md`) — a decode-time optimisation. It does
-not make a one-shot prefill cheap.
+This is also the honest re-read of Edge0's 113–140 tok/s cold prefill claim. **An earlier
+version of this section called that figure "arithmetically impossible if the whole ~20 GB
+model is read per pass". That claim is withdrawn — it was wrong.** 3,300 tokens at
+113 tok/s is 29.2 s, and a full 20.88 GB read in that window is **0.72 GB/s**, about 7×
+*under* an M4 Pro's SSD. The number was never impossible; the error was assuming a
+per-token full routed-set read, which is exactly what Edge0's design avoids.
+
+What actually happens: `staged_k4()` holds **4 fixed expert slots** (`staged_n` default 8,
+`cache_slots=64`) and a 33-head prerouter starting at layer 7 predicts the *next token's*
+routing one token ahead, so most steps move almost nothing — `docs/streaming.md` states
+the goal outright: turn "tens of MB moved per step" into "almost nothing moved per step".
+`hot_per_layer=0` in the production profile. It is a decode-time optimisation and it does
+not make a one-shot prefill cheap, which is the part of the original point that survives.
 
 ## 5. Where this leaves Edge0
 

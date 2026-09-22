@@ -1,0 +1,11 @@
+{
+ "output proj (vocab)": 417185792,
+ "token_embd (vocab)": 540344320,
+ "attention/ssm (always)": 1379248640,
+ "expert:down": 6247415808,
+ "dense ffn": 133693440,
+ "expert:gate": 6039797760,
+ "router (per layer)": 84213760,
+ "expert:up": 6039797760,
+ "norm (always)": 327680
+}

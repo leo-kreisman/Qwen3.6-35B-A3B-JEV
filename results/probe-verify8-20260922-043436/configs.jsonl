@@ -1,0 +1,2 @@
+{"note":"device read deltas are /sys/block/nvme0n1/stat sectors*512, whole device; proc deltas are /proc/self/io read_bytes, this shell and its reaped children"}
+--- ncmoe=8 ---

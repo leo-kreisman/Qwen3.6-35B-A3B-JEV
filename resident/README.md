@@ -73,7 +73,7 @@ An 8 GiB cap cannot cache a 20.9 GB checkpoint. Residency is worth having — a
 coding agent makes many calls, and 20 s of the 59 is pure overhead — but it
 cannot rescue the decode, because the decode was never paying for the load.
 
-## Two ways in
+## Three ways in
 
 ```bash
 # measurement: one call per fixture, one load
@@ -83,6 +83,10 @@ resident/resident_scorer.py --gguf MODEL.gguf --model TOKENIZER_DIR \
 # serving: newline-delimited JSON requests on stdin, one response line each
 resident/resident_scorer.py --gguf MODEL.gguf --model TOKENIZER_DIR --serve
 {"call_id": "a", "rows": [{"id": ..., "state": ..., "question": ..., "options": [...]}]}
+
+# HTTP, in JEV's own contract: a drop-in local System One provider
+resident/systemone_shim.py --gguf MODEL.gguf --model TOKENIZER_DIR --port 8123
+# then: export TYPESAFE_BASE_URL=http://127.0.0.1:8123
 ```
 
 `--repeat N` re-runs the fixture list N times. `--serve-output` also appends
@@ -93,6 +97,20 @@ timing; the process emits `resident_load` at start and `resident_summary` at end
 `read_bytes` from `/proc/self/io` — not wall clock — is the honest measure here.
 It includes page-fault-driven reads, so it counts what mmap actually pulled from
 the device. A warm run can beat a disk run on the clock while reading nothing.
+
+**The HTTP endpoint generates nothing, by construction.** It maps `state` +
+`questions` onto the same `score_shared` rows this scorer already runs, and maps
+the option scores back onto the contract's `noul` / `choice` / `score` answers.
+`usage.output_tokens` is **0**, and every string it returns is the caller's own
+text echoed back. That is the point: a decision is **one prefill pass** however
+many options it has, while generating the same answer would pay **212.6 MB per
+token** (cold) — see "Generation, measured" in `../README.md`. Its `local`
+telemetry carries `cache_state`, which distinguishes a page-cache-warm call from
+a real NVMe one, so a `0` in `call_read_bytes` cannot be misread as a dead
+counter. Calls are serialised: one context, one call at a time.
+
+Gate it with `test_systemone_shim.py` — 26 contract checks against the real
+checkpoint, non-zero exit on any mismatch.
 
 ## Running it capped
 

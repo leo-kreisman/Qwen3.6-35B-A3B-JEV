@@ -1,0 +1,11 @@
+# non-expert down-shift: Q8_0 -> Q5_K (attention + ssm + shared expert), Q6_K -> Q5_K (output)
+attn_qkv.weight=Q5_K
+attn_q.weight=Q5_K
+attn_k.weight=Q5_K
+attn_v.weight=Q5_K
+attn_output.weight=Q5_K
+attn_gate.weight=Q5_K
+ssm_out.weight=Q5_K
+ffn_up_shexp.weight=Q5_K
+ffn_gate_shexp.weight=Q5_K
+ffn_down_shexp.weight=Q5_K

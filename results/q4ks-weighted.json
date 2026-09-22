@@ -1,0 +1,1974 @@
+{
+  "gguf": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-UD-Q4_K_S.gguf",
+  "zstd_level": 3,
+  "kb_per_tensor": 384.0,
+  "n_expert_tensors": 120,
+  "expert_bytes_GB": 18.327,
+  "streams": {
+    "fp16_d_dmin": {
+      "raw_bytes": 503316480,
+      "size_weighted_pct_of_file": 2.746,
+      "size_weighted_entropy_bits_per_byte": 6.2224,
+      "size_weighted_zstd_ratio": 1.2719,
+      "size_weighted_zstd_pct_of_raw": 78.62,
+      "bytes_saved_GB": 0.108
+    },
+    "packed6": {
+      "raw_bytes": 1509949440,
+      "size_weighted_pct_of_file": 8.239,
+      "size_weighted_entropy_bits_per_byte": 7.0911,
+      "size_weighted_zstd_ratio": 1.1224,
+      "size_weighted_zstd_pct_of_raw": 89.1,
+      "bytes_saved_GB": 0.165
+    },
+    "payload": {
+      "raw_bytes": 16313745408,
+      "size_weighted_pct_of_file": 89.015,
+      "size_weighted_entropy_bits_per_byte": 7.6954,
+      "size_weighted_zstd_ratio": 1.0382,
+      "size_weighted_zstd_pct_of_raw": 96.32,
+      "bytes_saved_GB": 0.6
+    }
+  },
+  "by_kind": {
+    "ffn_down_exps": {
+      "raw_bytes": 6247415808,
+      "zstd_pct_of_raw": 96.25,
+      "zstd_ratio": 1.039
+    },
+    "ffn_gate_exps": {
+      "raw_bytes": 6039797760,
+      "zstd_pct_of_raw": 94.74,
+      "zstd_ratio": 1.0556
+    },
+    "ffn_up_exps": {
+      "raw_bytes": 6039797760,
+      "zstd_pct_of_raw": 94.71,
+      "zstd_ratio": 1.0559
+    }
+  },
+  "rows": [
+    {
+      "tensor": "blk.0.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2641,
+        "ent_bits": 6.2442
+      },
+      "packed6": {
+        "zstd_ratio": 1.0734,
+        "ent_bits": 7.405
+      },
+      "payload": {
+        "zstd_ratio": 1.1102,
+        "ent_bits": 7.2817
+      }
+    },
+    {
+      "tensor": "blk.0.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 2.5628,
+        "ent_bits": 3.8666
+      },
+      "packed6": {
+        "zstd_ratio": 2.3582,
+        "ent_bits": 4.2528
+      },
+      "payload": {
+        "zstd_ratio": 1.9802,
+        "ent_bits": 5.5325
+      }
+    },
+    {
+      "tensor": "blk.0.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 2.6554,
+        "ent_bits": 3.7408
+      },
+      "packed6": {
+        "zstd_ratio": 2.4178,
+        "ent_bits": 4.1722
+      },
+      "payload": {
+        "zstd_ratio": 1.9664,
+        "ent_bits": 5.5329
+      }
+    },
+    {
+      "tensor": "blk.1.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2724,
+        "ent_bits": 6.1952
+      },
+      "packed6": {
+        "zstd_ratio": 1.1182,
+        "ent_bits": 7.1004
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.7336
+      }
+    },
+    {
+      "tensor": "blk.1.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2881,
+        "ent_bits": 6.1282
+      },
+      "packed6": {
+        "zstd_ratio": 1.1201,
+        "ent_bits": 7.105
+      },
+      "payload": {
+        "zstd_ratio": 1.0295,
+        "ent_bits": 7.7376
+      }
+    },
+    {
+      "tensor": "blk.1.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2917,
+        "ent_bits": 6.107
+      },
+      "packed6": {
+        "zstd_ratio": 1.1204,
+        "ent_bits": 7.1017
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.7349
+      }
+    },
+    {
+      "tensor": "blk.10.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2613,
+        "ent_bits": 6.2508
+      },
+      "packed6": {
+        "zstd_ratio": 1.1113,
+        "ent_bits": 7.1423
+      },
+      "payload": {
+        "zstd_ratio": 1.0312,
+        "ent_bits": 7.7219
+      }
+    },
+    {
+      "tensor": "blk.10.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2484,
+        "ent_bits": 6.331
+      },
+      "packed6": {
+        "zstd_ratio": 1.1111,
+        "ent_bits": 7.1443
+      },
+      "payload": {
+        "zstd_ratio": 1.0312,
+        "ent_bits": 7.7235
+      }
+    },
+    {
+      "tensor": "blk.10.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.28,
+        "ent_bits": 6.1562
+      },
+      "packed6": {
+        "zstd_ratio": 1.1148,
+        "ent_bits": 7.1219
+      },
+      "payload": {
+        "zstd_ratio": 1.0307,
+        "ent_bits": 7.7275
+      }
+    },
+    {
+      "tensor": "blk.11.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2459,
+        "ent_bits": 6.3414
+      },
+      "packed6": {
+        "zstd_ratio": 1.1158,
+        "ent_bits": 7.1153
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7299
+      }
+    },
+    {
+      "tensor": "blk.11.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2735,
+        "ent_bits": 6.2097
+      },
+      "packed6": {
+        "zstd_ratio": 1.1133,
+        "ent_bits": 7.1293
+      },
+      "payload": {
+        "zstd_ratio": 1.0317,
+        "ent_bits": 7.719
+      }
+    },
+    {
+      "tensor": "blk.11.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.282,
+        "ent_bits": 6.1676
+      },
+      "packed6": {
+        "zstd_ratio": 1.1142,
+        "ent_bits": 7.1261
+      },
+      "payload": {
+        "zstd_ratio": 1.0319,
+        "ent_bits": 7.7176
+      }
+    },
+    {
+      "tensor": "blk.12.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2879,
+        "ent_bits": 6.1157
+      },
+      "packed6": {
+        "zstd_ratio": 1.1206,
+        "ent_bits": 7.0839
+      },
+      "payload": {
+        "zstd_ratio": 1.0292,
+        "ent_bits": 7.7376
+      }
+    },
+    {
+      "tensor": "blk.12.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2931,
+        "ent_bits": 6.1035
+      },
+      "packed6": {
+        "zstd_ratio": 1.1199,
+        "ent_bits": 7.0893
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.7341
+      }
+    },
+    {
+      "tensor": "blk.12.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2969,
+        "ent_bits": 6.0782
+      },
+      "packed6": {
+        "zstd_ratio": 1.1182,
+        "ent_bits": 7.0998
+      },
+      "payload": {
+        "zstd_ratio": 1.0302,
+        "ent_bits": 7.7315
+      }
+    },
+    {
+      "tensor": "blk.13.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.243,
+        "ent_bits": 6.3525
+      },
+      "packed6": {
+        "zstd_ratio": 1.1107,
+        "ent_bits": 7.1461
+      },
+      "payload": {
+        "zstd_ratio": 1.0313,
+        "ent_bits": 7.7231
+      }
+    },
+    {
+      "tensor": "blk.13.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2662,
+        "ent_bits": 6.2232
+      },
+      "packed6": {
+        "zstd_ratio": 1.1109,
+        "ent_bits": 7.1458
+      },
+      "payload": {
+        "zstd_ratio": 1.0318,
+        "ent_bits": 7.7187
+      }
+    },
+    {
+      "tensor": "blk.13.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2774,
+        "ent_bits": 6.1713
+      },
+      "packed6": {
+        "zstd_ratio": 1.1103,
+        "ent_bits": 7.1483
+      },
+      "payload": {
+        "zstd_ratio": 1.0319,
+        "ent_bits": 7.7165
+      }
+    },
+    {
+      "tensor": "blk.14.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.282,
+        "ent_bits": 6.1482
+      },
+      "packed6": {
+        "zstd_ratio": 1.1213,
+        "ent_bits": 7.0814
+      },
+      "payload": {
+        "zstd_ratio": 1.0294,
+        "ent_bits": 7.7381
+      }
+    },
+    {
+      "tensor": "blk.14.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2901,
+        "ent_bits": 6.1163
+      },
+      "packed6": {
+        "zstd_ratio": 1.1186,
+        "ent_bits": 7.0975
+      },
+      "payload": {
+        "zstd_ratio": 1.0302,
+        "ent_bits": 7.7308
+      }
+    },
+    {
+      "tensor": "blk.14.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2969,
+        "ent_bits": 6.0793
+      },
+      "packed6": {
+        "zstd_ratio": 1.121,
+        "ent_bits": 7.0842
+      },
+      "payload": {
+        "zstd_ratio": 1.0299,
+        "ent_bits": 7.7329
+      }
+    },
+    {
+      "tensor": "blk.15.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2248,
+        "ent_bits": 6.4436
+      },
+      "packed6": {
+        "zstd_ratio": 1.1189,
+        "ent_bits": 7.0963
+      },
+      "payload": {
+        "zstd_ratio": 1.0297,
+        "ent_bits": 7.7365
+      }
+    },
+    {
+      "tensor": "blk.15.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2719,
+        "ent_bits": 6.2065
+      },
+      "packed6": {
+        "zstd_ratio": 1.1171,
+        "ent_bits": 7.1087
+      },
+      "payload": {
+        "zstd_ratio": 1.0315,
+        "ent_bits": 7.7203
+      }
+    },
+    {
+      "tensor": "blk.15.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2808,
+        "ent_bits": 6.1546
+      },
+      "packed6": {
+        "zstd_ratio": 1.114,
+        "ent_bits": 7.1247
+      },
+      "payload": {
+        "zstd_ratio": 1.0318,
+        "ent_bits": 7.7164
+      }
+    },
+    {
+      "tensor": "blk.16.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2427,
+        "ent_bits": 6.3545
+      },
+      "packed6": {
+        "zstd_ratio": 1.1205,
+        "ent_bits": 7.0855
+      },
+      "payload": {
+        "zstd_ratio": 1.0299,
+        "ent_bits": 7.7324
+      }
+    },
+    {
+      "tensor": "blk.16.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2787,
+        "ent_bits": 6.1643
+      },
+      "packed6": {
+        "zstd_ratio": 1.1178,
+        "ent_bits": 7.1035
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7285
+      }
+    },
+    {
+      "tensor": "blk.16.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.285,
+        "ent_bits": 6.1384
+      },
+      "packed6": {
+        "zstd_ratio": 1.1179,
+        "ent_bits": 7.1036
+      },
+      "payload": {
+        "zstd_ratio": 1.0306,
+        "ent_bits": 7.7282
+      }
+    },
+    {
+      "tensor": "blk.17.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2616,
+        "ent_bits": 6.2532
+      },
+      "packed6": {
+        "zstd_ratio": 1.1142,
+        "ent_bits": 7.126
+      },
+      "payload": {
+        "zstd_ratio": 1.0309,
+        "ent_bits": 7.7251
+      }
+    },
+    {
+      "tensor": "blk.17.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2553,
+        "ent_bits": 6.2862
+      },
+      "packed6": {
+        "zstd_ratio": 1.1082,
+        "ent_bits": 7.1623
+      },
+      "payload": {
+        "zstd_ratio": 1.0318,
+        "ent_bits": 7.7188
+      }
+    },
+    {
+      "tensor": "blk.17.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2756,
+        "ent_bits": 6.1818
+      },
+      "packed6": {
+        "zstd_ratio": 1.1106,
+        "ent_bits": 7.1473
+      },
+      "payload": {
+        "zstd_ratio": 1.0309,
+        "ent_bits": 7.725
+      }
+    },
+    {
+      "tensor": "blk.18.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2451,
+        "ent_bits": 6.3411
+      },
+      "packed6": {
+        "zstd_ratio": 1.1086,
+        "ent_bits": 7.1548
+      },
+      "payload": {
+        "zstd_ratio": 1.0328,
+        "ent_bits": 7.7102
+      }
+    },
+    {
+      "tensor": "blk.18.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.273,
+        "ent_bits": 6.249
+      },
+      "packed6": {
+        "zstd_ratio": 1.122,
+        "ent_bits": 7.1364
+      },
+      "payload": {
+        "zstd_ratio": 1.0296,
+        "ent_bits": 7.7339
+      }
+    },
+    {
+      "tensor": "blk.18.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2628,
+        "ent_bits": 6.3151
+      },
+      "packed6": {
+        "zstd_ratio": 1.1208,
+        "ent_bits": 7.1439
+      },
+      "payload": {
+        "zstd_ratio": 1.0303,
+        "ent_bits": 7.7307
+      }
+    },
+    {
+      "tensor": "blk.19.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2534,
+        "ent_bits": 6.3094
+      },
+      "packed6": {
+        "zstd_ratio": 1.115,
+        "ent_bits": 7.1228
+      },
+      "payload": {
+        "zstd_ratio": 1.0301,
+        "ent_bits": 7.7327
+      }
+    },
+    {
+      "tensor": "blk.19.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2655,
+        "ent_bits": 6.2504
+      },
+      "packed6": {
+        "zstd_ratio": 1.1137,
+        "ent_bits": 7.1279
+      },
+      "payload": {
+        "zstd_ratio": 1.0312,
+        "ent_bits": 7.7244
+      }
+    },
+    {
+      "tensor": "blk.19.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.282,
+        "ent_bits": 6.1694
+      },
+      "packed6": {
+        "zstd_ratio": 1.1167,
+        "ent_bits": 7.1107
+      },
+      "payload": {
+        "zstd_ratio": 1.0314,
+        "ent_bits": 7.7217
+      }
+    },
+    {
+      "tensor": "blk.2.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2785,
+        "ent_bits": 6.1666
+      },
+      "packed6": {
+        "zstd_ratio": 1.1215,
+        "ent_bits": 7.0797
+      },
+      "payload": {
+        "zstd_ratio": 1.0292,
+        "ent_bits": 7.7381
+      }
+    },
+    {
+      "tensor": "blk.2.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2997,
+        "ent_bits": 6.0706
+      },
+      "packed6": {
+        "zstd_ratio": 1.1198,
+        "ent_bits": 7.0915
+      },
+      "payload": {
+        "zstd_ratio": 1.0297,
+        "ent_bits": 7.7346
+      }
+    },
+    {
+      "tensor": "blk.2.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.295,
+        "ent_bits": 6.087
+      },
+      "packed6": {
+        "zstd_ratio": 1.1208,
+        "ent_bits": 7.088
+      },
+      "payload": {
+        "zstd_ratio": 1.03,
+        "ent_bits": 7.7322
+      }
+    },
+    {
+      "tensor": "blk.20.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2381,
+        "ent_bits": 6.3822
+      },
+      "packed6": {
+        "zstd_ratio": 1.1204,
+        "ent_bits": 7.0887
+      },
+      "payload": {
+        "zstd_ratio": 1.029,
+        "ent_bits": 7.7403
+      }
+    },
+    {
+      "tensor": "blk.20.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2733,
+        "ent_bits": 6.2085
+      },
+      "packed6": {
+        "zstd_ratio": 1.1168,
+        "ent_bits": 7.109
+      },
+      "payload": {
+        "zstd_ratio": 1.0307,
+        "ent_bits": 7.7293
+      }
+    },
+    {
+      "tensor": "blk.20.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2962,
+        "ent_bits": 6.0924
+      },
+      "packed6": {
+        "zstd_ratio": 1.1168,
+        "ent_bits": 7.1086
+      },
+      "payload": {
+        "zstd_ratio": 1.0311,
+        "ent_bits": 7.7236
+      }
+    },
+    {
+      "tensor": "blk.21.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.237,
+        "ent_bits": 6.3873
+      },
+      "packed6": {
+        "zstd_ratio": 1.1189,
+        "ent_bits": 7.0943
+      },
+      "payload": {
+        "zstd_ratio": 1.0297,
+        "ent_bits": 7.7354
+      }
+    },
+    {
+      "tensor": "blk.21.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.271,
+        "ent_bits": 6.2048
+      },
+      "packed6": {
+        "zstd_ratio": 1.1159,
+        "ent_bits": 7.1133
+      },
+      "payload": {
+        "zstd_ratio": 1.0318,
+        "ent_bits": 7.7179
+      }
+    },
+    {
+      "tensor": "blk.21.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2777,
+        "ent_bits": 6.1698
+      },
+      "packed6": {
+        "zstd_ratio": 1.1149,
+        "ent_bits": 7.1208
+      },
+      "payload": {
+        "zstd_ratio": 1.0316,
+        "ent_bits": 7.7194
+      }
+    },
+    {
+      "tensor": "blk.22.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2655,
+        "ent_bits": 6.2348
+      },
+      "packed6": {
+        "zstd_ratio": 1.1131,
+        "ent_bits": 7.1325
+      },
+      "payload": {
+        "zstd_ratio": 1.0311,
+        "ent_bits": 7.7226
+      }
+    },
+    {
+      "tensor": "blk.22.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2313,
+        "ent_bits": 6.4147
+      },
+      "packed6": {
+        "zstd_ratio": 1.0995,
+        "ent_bits": 7.2187
+      },
+      "payload": {
+        "zstd_ratio": 1.0317,
+        "ent_bits": 7.7176
+      }
+    },
+    {
+      "tensor": "blk.22.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2721,
+        "ent_bits": 6.2002
+      },
+      "packed6": {
+        "zstd_ratio": 1.1078,
+        "ent_bits": 7.1642
+      },
+      "payload": {
+        "zstd_ratio": 1.0308,
+        "ent_bits": 7.7244
+      }
+    },
+    {
+      "tensor": "blk.23.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2265,
+        "ent_bits": 6.445
+      },
+      "packed6": {
+        "zstd_ratio": 1.1129,
+        "ent_bits": 7.1312
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7282
+      }
+    },
+    {
+      "tensor": "blk.23.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2489,
+        "ent_bits": 6.329
+      },
+      "packed6": {
+        "zstd_ratio": 1.1111,
+        "ent_bits": 7.1424
+      },
+      "payload": {
+        "zstd_ratio": 1.0349,
+        "ent_bits": 7.6929
+      }
+    },
+    {
+      "tensor": "blk.23.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2754,
+        "ent_bits": 6.1983
+      },
+      "packed6": {
+        "zstd_ratio": 1.1113,
+        "ent_bits": 7.1449
+      },
+      "payload": {
+        "zstd_ratio": 1.034,
+        "ent_bits": 7.7002
+      }
+    },
+    {
+      "tensor": "blk.24.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2825,
+        "ent_bits": 6.1497
+      },
+      "packed6": {
+        "zstd_ratio": 1.1219,
+        "ent_bits": 7.0801
+      },
+      "payload": {
+        "zstd_ratio": 1.0292,
+        "ent_bits": 7.7395
+      }
+    },
+    {
+      "tensor": "blk.24.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2875,
+        "ent_bits": 6.1197
+      },
+      "packed6": {
+        "zstd_ratio": 1.1207,
+        "ent_bits": 7.0873
+      },
+      "payload": {
+        "zstd_ratio": 1.0302,
+        "ent_bits": 7.7297
+      }
+    },
+    {
+      "tensor": "blk.24.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2942,
+        "ent_bits": 6.0861
+      },
+      "packed6": {
+        "zstd_ratio": 1.1188,
+        "ent_bits": 7.1004
+      },
+      "payload": {
+        "zstd_ratio": 1.0299,
+        "ent_bits": 7.7335
+      }
+    },
+    {
+      "tensor": "blk.25.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2335,
+        "ent_bits": 6.4009
+      },
+      "packed6": {
+        "zstd_ratio": 1.1123,
+        "ent_bits": 7.1355
+      },
+      "payload": {
+        "zstd_ratio": 1.0306,
+        "ent_bits": 7.7275
+      }
+    },
+    {
+      "tensor": "blk.25.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2518,
+        "ent_bits": 6.3106
+      },
+      "packed6": {
+        "zstd_ratio": 1.1083,
+        "ent_bits": 7.16
+      },
+      "payload": {
+        "zstd_ratio": 1.0334,
+        "ent_bits": 7.7055
+      }
+    },
+    {
+      "tensor": "blk.25.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2771,
+        "ent_bits": 6.185
+      },
+      "packed6": {
+        "zstd_ratio": 1.1089,
+        "ent_bits": 7.1532
+      },
+      "payload": {
+        "zstd_ratio": 1.0328,
+        "ent_bits": 7.7087
+      }
+    },
+    {
+      "tensor": "blk.26.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2816,
+        "ent_bits": 6.1533
+      },
+      "packed6": {
+        "zstd_ratio": 1.1236,
+        "ent_bits": 7.0713
+      },
+      "payload": {
+        "zstd_ratio": 1.029,
+        "ent_bits": 7.7399
+      }
+    },
+    {
+      "tensor": "blk.26.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2898,
+        "ent_bits": 6.1083
+      },
+      "packed6": {
+        "zstd_ratio": 1.1195,
+        "ent_bits": 7.0936
+      },
+      "payload": {
+        "zstd_ratio": 1.0297,
+        "ent_bits": 7.7365
+      }
+    },
+    {
+      "tensor": "blk.26.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.292,
+        "ent_bits": 6.0999
+      },
+      "packed6": {
+        "zstd_ratio": 1.1203,
+        "ent_bits": 7.0876
+      },
+      "payload": {
+        "zstd_ratio": 1.0302,
+        "ent_bits": 7.7318
+      }
+    },
+    {
+      "tensor": "blk.27.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2325,
+        "ent_bits": 6.4165
+      },
+      "packed6": {
+        "zstd_ratio": 1.121,
+        "ent_bits": 7.0841
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.7345
+      }
+    },
+    {
+      "tensor": "blk.27.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2682,
+        "ent_bits": 6.2386
+      },
+      "packed6": {
+        "zstd_ratio": 1.1156,
+        "ent_bits": 7.1155
+      },
+      "payload": {
+        "zstd_ratio": 1.032,
+        "ent_bits": 7.7162
+      }
+    },
+    {
+      "tensor": "blk.27.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2831,
+        "ent_bits": 6.1636
+      },
+      "packed6": {
+        "zstd_ratio": 1.1133,
+        "ent_bits": 7.1305
+      },
+      "payload": {
+        "zstd_ratio": 1.0321,
+        "ent_bits": 7.7148
+      }
+    },
+    {
+      "tensor": "blk.28.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2562,
+        "ent_bits": 6.286
+      },
+      "packed6": {
+        "zstd_ratio": 1.1208,
+        "ent_bits": 7.0856
+      },
+      "payload": {
+        "zstd_ratio": 1.0297,
+        "ent_bits": 7.7354
+      }
+    },
+    {
+      "tensor": "blk.28.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2764,
+        "ent_bits": 6.1805
+      },
+      "packed6": {
+        "zstd_ratio": 1.1219,
+        "ent_bits": 7.0788
+      },
+      "payload": {
+        "zstd_ratio": 1.0301,
+        "ent_bits": 7.7324
+      }
+    },
+    {
+      "tensor": "blk.28.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.287,
+        "ent_bits": 6.1261
+      },
+      "packed6": {
+        "zstd_ratio": 1.1187,
+        "ent_bits": 7.0988
+      },
+      "payload": {
+        "zstd_ratio": 1.0301,
+        "ent_bits": 7.7314
+      }
+    },
+    {
+      "tensor": "blk.29.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2655,
+        "ent_bits": 6.2403
+      },
+      "packed6": {
+        "zstd_ratio": 1.1108,
+        "ent_bits": 7.1463
+      },
+      "payload": {
+        "zstd_ratio": 1.0311,
+        "ent_bits": 7.7229
+      }
+    },
+    {
+      "tensor": "blk.29.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2279,
+        "ent_bits": 6.4365
+      },
+      "packed6": {
+        "zstd_ratio": 1.1025,
+        "ent_bits": 7.198
+      },
+      "payload": {
+        "zstd_ratio": 1.0317,
+        "ent_bits": 7.7202
+      }
+    },
+    {
+      "tensor": "blk.29.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2709,
+        "ent_bits": 6.21
+      },
+      "packed6": {
+        "zstd_ratio": 1.1094,
+        "ent_bits": 7.1551
+      },
+      "payload": {
+        "zstd_ratio": 1.0314,
+        "ent_bits": 7.7218
+      }
+    },
+    {
+      "tensor": "blk.3.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2914,
+        "ent_bits": 6.1082
+      },
+      "packed6": {
+        "zstd_ratio": 1.1205,
+        "ent_bits": 7.0858
+      },
+      "payload": {
+        "zstd_ratio": 1.0297,
+        "ent_bits": 7.7346
+      }
+    },
+    {
+      "tensor": "blk.3.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2935,
+        "ent_bits": 6.1005
+      },
+      "packed6": {
+        "zstd_ratio": 1.1205,
+        "ent_bits": 7.0861
+      },
+      "payload": {
+        "zstd_ratio": 1.0295,
+        "ent_bits": 7.7354
+      }
+    },
+    {
+      "tensor": "blk.3.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2975,
+        "ent_bits": 6.0845
+      },
+      "packed6": {
+        "zstd_ratio": 1.1194,
+        "ent_bits": 7.0945
+      },
+      "payload": {
+        "zstd_ratio": 1.0295,
+        "ent_bits": 7.7364
+      }
+    },
+    {
+      "tensor": "blk.30.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2533,
+        "ent_bits": 6.3054
+      },
+      "packed6": {
+        "zstd_ratio": 1.1122,
+        "ent_bits": 7.1358
+      },
+      "payload": {
+        "zstd_ratio": 1.0318,
+        "ent_bits": 7.7167
+      }
+    },
+    {
+      "tensor": "blk.30.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2653,
+        "ent_bits": 6.2997
+      },
+      "packed6": {
+        "zstd_ratio": 1.1234,
+        "ent_bits": 7.1264
+      },
+      "payload": {
+        "zstd_ratio": 1.0296,
+        "ent_bits": 7.7352
+      }
+    },
+    {
+      "tensor": "blk.30.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2727,
+        "ent_bits": 6.2599
+      },
+      "packed6": {
+        "zstd_ratio": 1.1202,
+        "ent_bits": 7.1468
+      },
+      "payload": {
+        "zstd_ratio": 1.0299,
+        "ent_bits": 7.7335
+      }
+    },
+    {
+      "tensor": "blk.31.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2419,
+        "ent_bits": 6.364
+      },
+      "packed6": {
+        "zstd_ratio": 1.1153,
+        "ent_bits": 7.119
+      },
+      "payload": {
+        "zstd_ratio": 1.0299,
+        "ent_bits": 7.7345
+      }
+    },
+    {
+      "tensor": "blk.31.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2544,
+        "ent_bits": 6.296
+      },
+      "packed6": {
+        "zstd_ratio": 1.1133,
+        "ent_bits": 7.1299
+      },
+      "payload": {
+        "zstd_ratio": 1.0319,
+        "ent_bits": 7.7169
+      }
+    },
+    {
+      "tensor": "blk.31.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2764,
+        "ent_bits": 6.1927
+      },
+      "packed6": {
+        "zstd_ratio": 1.1105,
+        "ent_bits": 7.1445
+      },
+      "payload": {
+        "zstd_ratio": 1.032,
+        "ent_bits": 7.7148
+      }
+    },
+    {
+      "tensor": "blk.32.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2461,
+        "ent_bits": 6.3528
+      },
+      "packed6": {
+        "zstd_ratio": 1.1167,
+        "ent_bits": 7.1095
+      },
+      "payload": {
+        "zstd_ratio": 1.0297,
+        "ent_bits": 7.7372
+      }
+    },
+    {
+      "tensor": "blk.32.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2511,
+        "ent_bits": 6.3246
+      },
+      "packed6": {
+        "zstd_ratio": 1.1117,
+        "ent_bits": 7.1393
+      },
+      "payload": {
+        "zstd_ratio": 1.032,
+        "ent_bits": 7.7156
+      }
+    },
+    {
+      "tensor": "blk.32.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2807,
+        "ent_bits": 6.1664
+      },
+      "packed6": {
+        "zstd_ratio": 1.1138,
+        "ent_bits": 7.1272
+      },
+      "payload": {
+        "zstd_ratio": 1.0313,
+        "ent_bits": 7.7207
+      }
+    },
+    {
+      "tensor": "blk.33.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.278,
+        "ent_bits": 6.1815
+      },
+      "packed6": {
+        "zstd_ratio": 1.1201,
+        "ent_bits": 7.0905
+      },
+      "payload": {
+        "zstd_ratio": 1.0287,
+        "ent_bits": 7.7429
+      }
+    },
+    {
+      "tensor": "blk.33.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2853,
+        "ent_bits": 6.1518
+      },
+      "packed6": {
+        "zstd_ratio": 1.1188,
+        "ent_bits": 7.0992
+      },
+      "payload": {
+        "zstd_ratio": 1.0301,
+        "ent_bits": 7.7343
+      }
+    },
+    {
+      "tensor": "blk.33.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2914,
+        "ent_bits": 6.1154
+      },
+      "packed6": {
+        "zstd_ratio": 1.1192,
+        "ent_bits": 7.0969
+      },
+      "payload": {
+        "zstd_ratio": 1.0301,
+        "ent_bits": 7.7327
+      }
+    },
+    {
+      "tensor": "blk.34.ffn_down_exps.weight",
+      "sampled_blocks": 1828,
+      "fp16_d_dmin": {
+        "zstd_ratio": 0.9986,
+        "ent_bits": 7.9381
+      },
+      "packed6": {
+        "zstd_ratio": 0.9995,
+        "ent_bits": 7.9592
+      },
+      "payload": {
+        "zstd_ratio": 0.9999,
+        "ent_bits": 7.922
+      }
+    },
+    {
+      "tensor": "blk.34.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2644,
+        "ent_bits": 6.252
+      },
+      "packed6": {
+        "zstd_ratio": 1.1022,
+        "ent_bits": 7.1968
+      },
+      "payload": {
+        "zstd_ratio": 1.0317,
+        "ent_bits": 7.7187
+      }
+    },
+    {
+      "tensor": "blk.34.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2805,
+        "ent_bits": 6.1591
+      },
+      "packed6": {
+        "zstd_ratio": 1.1126,
+        "ent_bits": 7.1335
+      },
+      "payload": {
+        "zstd_ratio": 1.0313,
+        "ent_bits": 7.7217
+      }
+    },
+    {
+      "tensor": "blk.35.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2634,
+        "ent_bits": 6.2591
+      },
+      "packed6": {
+        "zstd_ratio": 1.1152,
+        "ent_bits": 7.1195
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.7354
+      }
+    },
+    {
+      "tensor": "blk.35.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.257,
+        "ent_bits": 6.2877
+      },
+      "packed6": {
+        "zstd_ratio": 1.1099,
+        "ent_bits": 7.1499
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7286
+      }
+    },
+    {
+      "tensor": "blk.35.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2771,
+        "ent_bits": 6.1743
+      },
+      "packed6": {
+        "zstd_ratio": 1.1178,
+        "ent_bits": 7.1048
+      },
+      "payload": {
+        "zstd_ratio": 1.0303,
+        "ent_bits": 7.7308
+      }
+    },
+    {
+      "tensor": "blk.36.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2659,
+        "ent_bits": 6.2481
+      },
+      "packed6": {
+        "zstd_ratio": 1.114,
+        "ent_bits": 7.1249
+      },
+      "payload": {
+        "zstd_ratio": 1.0307,
+        "ent_bits": 7.7274
+      }
+    },
+    {
+      "tensor": "blk.36.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2419,
+        "ent_bits": 6.3612
+      },
+      "packed6": {
+        "zstd_ratio": 1.1091,
+        "ent_bits": 7.1568
+      },
+      "payload": {
+        "zstd_ratio": 1.0304,
+        "ent_bits": 7.7281
+      }
+    },
+    {
+      "tensor": "blk.36.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2745,
+        "ent_bits": 6.2058
+      },
+      "packed6": {
+        "zstd_ratio": 1.1135,
+        "ent_bits": 7.13
+      },
+      "payload": {
+        "zstd_ratio": 1.0309,
+        "ent_bits": 7.7278
+      }
+    },
+    {
+      "tensor": "blk.37.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2406,
+        "ent_bits": 6.373
+      },
+      "packed6": {
+        "zstd_ratio": 1.118,
+        "ent_bits": 7.1034
+      },
+      "payload": {
+        "zstd_ratio": 1.0292,
+        "ent_bits": 7.7384
+      }
+    },
+    {
+      "tensor": "blk.37.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2583,
+        "ent_bits": 6.2817
+      },
+      "packed6": {
+        "zstd_ratio": 1.115,
+        "ent_bits": 7.1178
+      },
+      "payload": {
+        "zstd_ratio": 1.0309,
+        "ent_bits": 7.7257
+      }
+    },
+    {
+      "tensor": "blk.37.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2787,
+        "ent_bits": 6.1809
+      },
+      "packed6": {
+        "zstd_ratio": 1.1156,
+        "ent_bits": 7.1188
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7283
+      }
+    },
+    {
+      "tensor": "blk.38.ffn_down_exps.weight",
+      "sampled_blocks": 1828,
+      "fp16_d_dmin": {
+        "zstd_ratio": 0.9986,
+        "ent_bits": 7.9447
+      },
+      "packed6": {
+        "zstd_ratio": 0.9995,
+        "ent_bits": 7.9567
+      },
+      "payload": {
+        "zstd_ratio": 0.9999,
+        "ent_bits": 7.9219
+      }
+    },
+    {
+      "tensor": "blk.38.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2313,
+        "ent_bits": 6.414
+      },
+      "packed6": {
+        "zstd_ratio": 1.1065,
+        "ent_bits": 7.1705
+      },
+      "payload": {
+        "zstd_ratio": 1.0309,
+        "ent_bits": 7.7246
+      }
+    },
+    {
+      "tensor": "blk.38.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2644,
+        "ent_bits": 6.2507
+      },
+      "packed6": {
+        "zstd_ratio": 1.1126,
+        "ent_bits": 7.136
+      },
+      "payload": {
+        "zstd_ratio": 1.0309,
+        "ent_bits": 7.7258
+      }
+    },
+    {
+      "tensor": "blk.39.ffn_down_exps.weight",
+      "sampled_blocks": 1828,
+      "fp16_d_dmin": {
+        "zstd_ratio": 0.9986,
+        "ent_bits": 7.9472
+      },
+      "packed6": {
+        "zstd_ratio": 0.9995,
+        "ent_bits": 7.9577
+      },
+      "payload": {
+        "zstd_ratio": 0.9999,
+        "ent_bits": 7.9197
+      }
+    },
+    {
+      "tensor": "blk.39.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2263,
+        "ent_bits": 6.4517
+      },
+      "packed6": {
+        "zstd_ratio": 1.108,
+        "ent_bits": 7.1672
+      },
+      "payload": {
+        "zstd_ratio": 1.0295,
+        "ent_bits": 7.7378
+      }
+    },
+    {
+      "tensor": "blk.39.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2331,
+        "ent_bits": 6.4024
+      },
+      "packed6": {
+        "zstd_ratio": 1.1174,
+        "ent_bits": 7.1076
+      },
+      "payload": {
+        "zstd_ratio": 1.0301,
+        "ent_bits": 7.7317
+      }
+    },
+    {
+      "tensor": "blk.4.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2884,
+        "ent_bits": 6.1226
+      },
+      "packed6": {
+        "zstd_ratio": 1.1209,
+        "ent_bits": 7.087
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.736
+      }
+    },
+    {
+      "tensor": "blk.4.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2984,
+        "ent_bits": 6.0789
+      },
+      "packed6": {
+        "zstd_ratio": 1.1205,
+        "ent_bits": 7.0856
+      },
+      "payload": {
+        "zstd_ratio": 1.03,
+        "ent_bits": 7.7324
+      }
+    },
+    {
+      "tensor": "blk.4.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2969,
+        "ent_bits": 6.0809
+      },
+      "packed6": {
+        "zstd_ratio": 1.1213,
+        "ent_bits": 7.0813
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7296
+      }
+    },
+    {
+      "tensor": "blk.5.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2658,
+        "ent_bits": 6.2411
+      },
+      "packed6": {
+        "zstd_ratio": 1.1221,
+        "ent_bits": 7.0782
+      },
+      "payload": {
+        "zstd_ratio": 1.0292,
+        "ent_bits": 7.7397
+      }
+    },
+    {
+      "tensor": "blk.5.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2859,
+        "ent_bits": 6.128
+      },
+      "packed6": {
+        "zstd_ratio": 1.1207,
+        "ent_bits": 7.0861
+      },
+      "payload": {
+        "zstd_ratio": 1.0301,
+        "ent_bits": 7.7328
+      }
+    },
+    {
+      "tensor": "blk.5.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2939,
+        "ent_bits": 6.099
+      },
+      "packed6": {
+        "zstd_ratio": 1.12,
+        "ent_bits": 7.0905
+      },
+      "payload": {
+        "zstd_ratio": 1.0308,
+        "ent_bits": 7.728
+      }
+    },
+    {
+      "tensor": "blk.6.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2807,
+        "ent_bits": 6.1558
+      },
+      "packed6": {
+        "zstd_ratio": 1.1177,
+        "ent_bits": 7.1039
+      },
+      "payload": {
+        "zstd_ratio": 1.0295,
+        "ent_bits": 7.7369
+      }
+    },
+    {
+      "tensor": "blk.6.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2819,
+        "ent_bits": 6.1459
+      },
+      "packed6": {
+        "zstd_ratio": 1.1203,
+        "ent_bits": 7.0875
+      },
+      "payload": {
+        "zstd_ratio": 1.03,
+        "ent_bits": 7.732
+      }
+    },
+    {
+      "tensor": "blk.6.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2915,
+        "ent_bits": 6.1096
+      },
+      "packed6": {
+        "zstd_ratio": 1.1185,
+        "ent_bits": 7.1014
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7302
+      }
+    },
+    {
+      "tensor": "blk.7.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2559,
+        "ent_bits": 6.2824
+      },
+      "packed6": {
+        "zstd_ratio": 1.1184,
+        "ent_bits": 7.0996
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.7351
+      }
+    },
+    {
+      "tensor": "blk.7.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2904,
+        "ent_bits": 6.1288
+      },
+      "packed6": {
+        "zstd_ratio": 1.1206,
+        "ent_bits": 7.0852
+      },
+      "payload": {
+        "zstd_ratio": 1.0302,
+        "ent_bits": 7.7304
+      }
+    },
+    {
+      "tensor": "blk.7.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2924,
+        "ent_bits": 6.0928
+      },
+      "packed6": {
+        "zstd_ratio": 1.1187,
+        "ent_bits": 7.0979
+      },
+      "payload": {
+        "zstd_ratio": 1.0303,
+        "ent_bits": 7.7307
+      }
+    },
+    {
+      "tensor": "blk.8.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2578,
+        "ent_bits": 6.272
+      },
+      "packed6": {
+        "zstd_ratio": 1.1223,
+        "ent_bits": 7.0768
+      },
+      "payload": {
+        "zstd_ratio": 1.0294,
+        "ent_bits": 7.7377
+      }
+    },
+    {
+      "tensor": "blk.8.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2844,
+        "ent_bits": 6.1421
+      },
+      "packed6": {
+        "zstd_ratio": 1.1194,
+        "ent_bits": 7.0955
+      },
+      "payload": {
+        "zstd_ratio": 1.0298,
+        "ent_bits": 7.7361
+      }
+    },
+    {
+      "tensor": "blk.8.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.298,
+        "ent_bits": 6.0815
+      },
+      "packed6": {
+        "zstd_ratio": 1.119,
+        "ent_bits": 7.0935
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7291
+      }
+    },
+    {
+      "tensor": "blk.9.ffn_down_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2393,
+        "ent_bits": 6.3662
+      },
+      "packed6": {
+        "zstd_ratio": 1.1184,
+        "ent_bits": 7.1005
+      },
+      "payload": {
+        "zstd_ratio": 1.03,
+        "ent_bits": 7.732
+      }
+    },
+    {
+      "tensor": "blk.9.ffn_gate_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2828,
+        "ent_bits": 6.1473
+      },
+      "packed6": {
+        "zstd_ratio": 1.1185,
+        "ent_bits": 7.1003
+      },
+      "payload": {
+        "zstd_ratio": 1.0305,
+        "ent_bits": 7.7279
+      }
+    },
+    {
+      "tensor": "blk.9.ffn_up_exps.weight",
+      "sampled_blocks": 2666,
+      "fp16_d_dmin": {
+        "zstd_ratio": 1.2864,
+        "ent_bits": 6.1295
+      },
+      "packed6": {
+        "zstd_ratio": 1.117,
+        "ent_bits": 7.108
+      },
+      "payload": {
+        "zstd_ratio": 1.0306,
+        "ent_bits": 7.7271
+      }
+    }
+  ],
+  "whole_routed_set_zstd_pct_of_raw": 95.24,
+  "whole_routed_set_bytes_saved_GB": 0.872
+}

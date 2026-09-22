@@ -1,0 +1,19 @@
+t=7s read_bytes=4906405888
+t=12s read_bytes=11164831744
+t=17s read_bytes=16474034176
+t=22s read_bytes=20969488384
+t=27s read_bytes=27405623296
+t=32s read_bytes=33285361664
+t=37s read_bytes=37091131392
+t=42s read_bytes=40721276928
+t=47s read_bytes=44320960512
+t=52s read_bytes=44320960512
+TAG=capped_ev exit=0 peak_read_bytes=44320960512
+memory.peak=8589934592
+--- memory.events ---
+low 0
+high 0
+max 25499
+oom 0
+oom_kill 0
+oom_group_kill 0

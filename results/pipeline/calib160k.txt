@@ -1,0 +1,2540 @@
+# Architecture decomposition — each part, and who solved it first
+
+The project's architecture is not novel in any single part. It is ten ordinary primitives
+assembled into one pipeline. Each part below is answered *better* somewhere else, usually for
+an unrelated reason — databases, filesystems, CPU caches, scientific data formats, version
+control. This is that map: what the part is, who solves it best, and what is importable.
+
+**Read the "Import" lines as the work list. The "Evidence" lines are why it is worth doing.**
+
+---
+
+## 1. On-disk layout and blocking
+
+**Primitive:** how model bytes are cut into addressable units on the device.
+
+**Who else solves it:** read-only compressed filesystems. **EROFS** uses *fixed-output*
+compression (4 KiB pclusters → variable input) while **SquashFS** uses fixed *input*
+(128 KiB chunks → variable output). That single difference is why SquashFS suffers brutal
+read amplification on random access — ATC'19 measured **~165 MB of I/O to serve 16 MB of
+random reads** — while EROFS reads at most two clusters per request and every byte read is
+usable. EROFS also **interleaves data with metadata** for locality; SquashFS stores them apart.
+
+**Best-in-class:** EROFS block-aligned fixed-output clusters, zstd, with in-place
+decompression (99.6% of blocks qualify) and `cache_strategy=` control.
+
+**Import:** cut expert slabs on **output** boundaries, not input. 16 KiB-aligned (already in
+the convergent design), and co-locate the offset/index with the data it indexes (see §2).
+
+**Evidence:** EROFS beats SquashFS on every compressor in the sigma-star benchmark (LZ4:
+30.9 vs 26.3 MiB/s), at a modest density cost.
+
+## 2. Addressing / offset table
+
+**Primitive:** finding a named expert's bytes without an extra random read.
+
+**Who else solves it:** LSM-tree storage engines. The **SSTable trailing index block** pattern
+keeps the index adjacent to the data so a lookup is one seek, not two. Zarr/HDF5 chunk grids,
+CDN piece maps and torrent piece hashes are the same idea in other clothes.
+
+**Import:** the sidecar offset table is a *separate file* today — every lookup risks its own
+random read. Fold the index into the slab. This is nearly free and removes a whole class of
+second-order latency.
+
+## 3. Read path — the biggest measured gap
+
+**Primitive:** getting 590 KB–7 MB extents off NVMe into CPU buffers.
+
+**Who else solves it:** databases. The consensus is unambiguous:
+
+| strategy | IOPS | throughput |
+|---|---|---|
+| sync `pread`, 1 thread | 28,418 | 111 MiB/s |
+| threaded `pread`, 24 cores | 564,188 | 2,204 MiB/s |
+| **io_uring, qd=32** | 752,937 | **2,941 MiB/s** |
+| **io_uring, qd=128** | **974,495** | **3,807 MiB/s** |
+
+Sources: [nazq/io-uring-bench](https://github.com/nazq/io-uring-bench),
+[io_uring for High-Performance DBMSs](https://arxiv.org/html/2512.04859),
+[Fixed Buffers and Files](https://kernel-internals.org/io-uring/fixed-buffers/).
+
+**Registered buffers** cut 30–40 µs CPU/op on 4 KiB random reads at depth 32; IOPOLL +21%,
+SQPOLL +32%. **Caveat:** on warm page cache io_uring is *slower* (~7 vs ~8 GB/s) — it only
+wins cold with `O_DIRECT`.
+
+**Import — and this reframes our own best finding.** We use synchronous `pread` through mmap
+demand faults. Our **thread-oversubscription result (4/3 nproc, 54.6 → 38.4 s, −29.6%)** is
+not a fundamental law — it is the *substitute* for missing queue depth. We over-subscribe
+threads because a faulting thread is not runnable and we have no async queue. io_uring gives
+the same queue depth directly, and at qd=128 goes **1.7× beyond the best threaded pread**.
+Also: `read_ahead_kb` is irrelevant under `O_DIRECT`; `scheduler=none`, `nomerges=2`,
+`rq_affinity=2` are the NVMe knobs ([kernel queue-sysfs](https://kernel-internals.org/io/tuning-storage/)).
+
+## 4. Cache / slot pool and eviction
+
+**Primitive:** which experts stay resident.
+
+**Who else solves it:** CDN and application caches. **W-TinyLFU** (Caffeine) is the only scheme
+reported to do well on *all* traces: near-optimal hit rate, ~8 bytes/entry overhead, **no ghost
+entries**, and **not patented**. ARC is stronger on some traces but is **patented by IBM** —
+excluded on licensing grounds alone. LIRS needs ~3× cache for ghost entries.
+
+**The reframe that matters:** TinyLFU's result is that **admission policy dominates eviction
+policy**. Under skewed (Zipf) access — which MoE routing is — *LRU plus good admission* nearly
+matches true LFU. So the expensive part (exotic eviction) is largely unnecessary; the cheap
+part (a doorkeeper filter + CountMinSketch admission) is where the win is.
+
+**Import:** replace LRU with **W-TinyLFU admission**. Keep the 8-slots/layer floor.
+Sources: [Caffeine efficiency](https://github.com/ben-manes/caffeine/wiki/Efficiency),
+[TinyLFU](https://arxiv.org/pdf/1512.00727).
+
+## 5. Admission control / working-set protection
+
+**Primitive:** refusing to admit what will cause reclaim — and not evicting your own working set.
+
+**Who else solves it:** the Linux kernel. **MGLRU** (6.1+) replaces the active/inactive pair
+with four generations and adds `lru_gen_min_ttl` — a minimum time-to-live that protects the
+working set from being reclaimed. It also exploits that **unmapped pages need no TLB flush**.
+
+**Import:** our measurement showed a pass evicting its own early pages before finishing (call 2
+starts at layer 0 with nothing warm — "do not look for a residency scheme that compounds").
+`lru_gen_min_ttl` is the kernel's name for exactly that failure mode, and the fix is the same:
+protect the working set by age, not by position in an LRU. Sources:
+[MGLRU docs](https://docs.kernel.org/7.1/mm/multigen_lru.html),
+[LWN](https://lwn.net/Articles/894859/).
+
+## 6. Prefetch / prediction
+
+**Primitive:** issuing the read before the demand arrives.
+
+**Who else solves it:** DBMS research, where this is mature — and it is the adult version of
+Edge0's 33-head prerouter whose accuracy is never measured in-repo.
+
+- **GrASP** — LSTM framed as multi-label classification over LBA deltas; generalizes to
+  datasets **250× larger than training**; +45% hit ratio, −60% I/O time.
+- **Pythia** — transformer encoder into the Postgres buffer manager; up to **6× on DSB OLAP**.
+- **SeLeP** — encoder-decoder LSTM as time-series forecasting; +40% hit ratio, −45% I/O.
+
+**The honest limit:** all of it is **decode-time**. Our expensive case is **prefill**, where a
+one-token lookahead is useless — the whole layer's expert set is touched. None of the surveyed
+engines solves prefill prefetch either. This remains the open problem.
+Sources: [GrASP](https://arxiv.org/html/2510.11011), [Pythia](https://openproceedings.org/2025/conf/edbt/paper-102.pdf),
+[SeLeP](https://dl.acm.org/doi/10.14778/3659437.3659458).
+
+## 7. Scheduling / I/O dispatch
+
+**Primitive:** keeping the device queue fed.
+
+**Who else solves it:** thread-per-core servers (Seastar), work-stealing runtimes, and
+io_uring's SQPOLL/IOPOLL modes. Our 4/3-nproc result is real and measured, but §3 shows it is a
+workaround for synchronous I/O rather than a property of the problem.
+
+## 8. Work grouping / batching
+
+**Primitive:** amortizing one pass over many items.
+
+**Who else solves it:** database group commit and WAL batching; GPU kernel fusion. Our version
+is `n_batch = n_ubatch = sequences × 512` (67.0 → 42.0 GB). The deeper version is §11.
+
+## 9. Weight coding — the lossless question
+
+**Primitive:** fewer bytes per expert, **no quality loss**.
+
+**Who else solves it:** scientific data compression and AI-model storage. Four directly usable
+results:
+
+- **QStore** (VLDB 2025) — stores the model at two precisions: low-precision **plus the residual
+  needed for lossless reconstruction**. Groups floats **by quantization function (block scale),
+  then by post-quantization value**, and Huffman-codes per subgroup. **2.2× storage reduction,
+  10.7–11.5 bits/weight vs 24.** This is precisely our structure: Q4_K_S = 4-bit quants + fp16
+  block scales/mins.
+- **ZipNN** (IBM) — the compressibility is in the **exponent**, which is highly skewed (top 12
+  values ≈ 99.9% of parameters). Extract exponents into their own stream, group by byte,
+  **Huffman only** (skip LZ — there is no multi-byte repetition). BF16 ~33% savings; "clean"
+  FP16 up to >50%; **80 GB/s decompress** multi-threaded, 1.65 GB/s single-thread.
+- **Huff-LLM** — Huffman over FP16 sign/exponent/mantissa-MSB/LSB as separate streams;
+  24–32%, single-cycle hardware decoder.
+- **Blosc shuffle/bitshuffle** — byte/bit-plane transposition so a general codec can work;
+  lz4-bitshuffle runs ~21 GB/s compression; ratios to 83× on structured scientific data.
+
+**Import — and a correction to our own dead-end note.** We recorded "lossless compression of
+quantized weights" as dead because 4-bit streams are incompressible and rANS decodes at
+114–120 MB/s. **That tested the wrong stream.** The 4-bit quants *are* incompressible; the
+**fp16 scales and mins are not** — their exponents are exactly the skewed data ZipNN targets.
+The move is to **separate the metadata stream from the payload stream** (byte-plane
+transposition), compress only the metadata with Huffman, and keep the payload raw. QStore is
+the published version of this. Sources: [QStore](https://www.vldb.org/pvldb/vol19/p388-li.pdf),
+[ZipNN](https://arxiv.org/html/2411.05239), [NeuZip](https://arxiv.org/html/2410.20650),
+[Blosc bitshuffle](https://blosc.org/posts/new-bitshuffle-filter/).
+
+## 10. Compute–layout coupling
+
+**Primitive:** the byte layout the dequant kernel wants vs the layout the disk wants.
+
+**Who else solves it:** cache-hierarchy-aware array formats. **Blosc2 NDim** uses two-level
+partitioning (chunks → blocks) deliberately **mapped to L1/L2/L3**, and **Btune** auto-selects
+codec/filter per array. Our own tension is the mirror image: `use_extra_bufts=false` (repack
+off) is required to avoid OOM, but repack exists because `q4_K_8x8` is faster to compute. We
+traded compute for residency. Sizing the slot pool to the **cache hierarchy** rather than to
+RAM alone is the unexplored middle. Source:
+[Blosc2 NDim](https://blosc.org/docs/Exploring-MilkyWay-SciPy2023-paper.pdf).
+
+## 11. The one that compounds everything — amortization by verification
+
+**Primitive:** paying the expert read once for *many* tokens.
+
+**Who else solves it:** speculative decoding for MoE offload, which is a direct, published
+answer to our measured 212.6 MB/token:
+
+- **SpecMoE** — self-assisted speculative decoding; multiple tokens generated **per expert
+  parameter retrieval**; on **SSD offloading ~2.25× throughput**; up to 4.30× overall;
+  **76.73% reduction in CPU→GPU transfer**. Works on less-skewed models too.
+- **MoE-SpeQ** — states the goal formally as an **"Amortization Roofline Model"**: maximise
+  *accepted tokens per byte of synchronous I/O*.
+- **SpecMoEOff** — 2.5× decode over MoE-Lightning. **DraftExpert** — reframes around
+  **"accepted tokens per expert-set expansion"**.
+
+Sources: [SpecMoE](https://www.arxiv.org/pdf/2604.10152), [MoE-SpeQ](https://arxiv.org/html/2511.14102v1),
+[SpecMoEOff](https://arxiv.org/pdf/2508.21706), [DraftExpert](https://arxiv.org/html/2607.24434v1).
+
+**Why this is the highest-leverage import in the survey:** our cost is *per token* expert bytes,
+and our measured cold decode is **3.67 tok/s at 212.6 MB/token**. A verification pass fetches
+the **union** of experts for k draft tokens — one read serving k accepted tokens. It attacks the
+exact quantity we measured, it is published with SSD numbers, and **none of the surveyed
+engines does it.**
+
+## Honest counterweight — do not present without it
+
+**[SSD Offloading for LLM MoE Weights Considered Harmful in Energy Efficiency](https://arxiv.org/html/2508.06978v1)**
+measures SSD offload at up to **12× the per-token energy of HBM** and ~3× CPU DRAM, with SSD at
+**73–80% of total energy**. Prefetching hides *latency*, not energy. Any claim about this
+architecture should say "faster", never "more efficient".
+
+---
+
+## The compounded proposal
+
+Three imports compound, and one is ours:
+
+1. **io_uring + O_DIRECT at qd 32–128** (§3) — replaces thread oversubscription and goes past it.
+2. **Metadata/payload stream separation with Huffman on the metadata only** (§9, QStore/ZipNN) —
+   the one lossless lever our own dead-end note wrongly closed.
+3. **Speculative verification** (§11) — amortizes the measured 212.6 MB/token across accepted tokens.
+4. **W-TinyLFU admission** (§4) — cheap, unpatented, and the evidence says admission beats eviction.
+
+Our own contribution stands: the thread-oversubscription measurement, and a **cold 8 GiB-capped
+decode number (3.67 tok/s)** that no one else in this space has published — Edge0's figures are
+on a 24 GB machine with the checkpoint effectively page-cached.
+# Piece-wise architecture optimization — where the bytes actually are
+
+**Why this file exists.** The project optimized one piece: the routed experts
+(18.33 GB of file, 88% of storage). That is where the *disk* bytes are. It is **not**
+where the *per-token* bytes are. This is the decomposition, priced in the unit the
+physics charges — **bytes streamed per token** — with each piece's best-in-class
+solution from the literature.
+
+## 1. The correction
+
+Measured from the GGUF tensor table (`results/gguf-byte-breakdown.json`):
+
+| class | stored | **read per token** | share of per-token traffic | stored at |
+|---|---|---|---|---|
+| attention / ssm | 1.379 GB | **1.379 GB** | **53.3%** | **Q8_0** |
+| expert gate/up/down | 18.327 GB | 0.573 GB (8/256 active) | 22.1% | Q4_K |
+| output proj | 0.417 GB | **0.417 GB** | **16.1%** | **Q6_K** |
+| dense ffn | 0.134 GB | 0.134 GB | 5.2% | Q8_0 |
+| router | 0.084 GB | 0.084 GB | 3.3% | **F32** |
+| token_embd | 0.540 GB | ~0 (one row lookup) | 0% | Q8_0 |
+| **total** | **20.88 GB** | **2.587 GB / token** | | |
+
+**The non-expert weights are 77.9% of per-token traffic, and they are stored at 8,
+6 and 32 bits.** The single largest per-token term is not an expert at all — it is
+the attention/SSM block at Q8_0, worth more traffic than all 256 experts of a layer
+combined.
+
+**Validation of the model.** 2.587 GB/token × the measured 10.97 tok/s = **28.4 GB/s
+= 74% of DDR4-2400 dual-channel peak (38.4 GB/s)**. That is a realistic achieved
+fraction for dense matvec over partially-random expert rows, and it lands
+independently of the breakdown — the two measurements corroborate each other. The
+earlier 1.989 GB/token figure was *active-params only* and understated the real cost
+by 30%.
+
+## 2. Every piece, and what optimizing it buys
+
+| piece | change | GB/token saved | verdict |
+|---|---|---|---|
+| attention/ssm Q8_0 → Q4_K | 1.379 → 0.831 | **−0.548** | biggest single win in the whole model |
+| output proj Q6_K → Q4_K | 0.417 → 0.335 | −0.082 | cheap, always active |
+| output proj vocab-prune to 40% | 0.335 → 0.134 | −0.201 | needs a quality check on the decision task |
+| cold experts 2-bit (tiered) | 0.573 → 0.267 | −0.306 | lossy-but-diluted; flash-moe precedent |
+| dense ffn Q8_0 → Q4_K | 0.134 → 0.080 | −0.054 | small, always active |
+| router F32 | **do not touch** | 0 | it *chooses* the experts — any change flips decisions |
+| token_embd Q8_0 | **trap** | **0** | one row is read per token; it is a lookup, not a stream. Optimizing it helps RAM footprint, not tok/s |
+
+### The ceiling, if you stacked them
+
+| configuration | GB/token | ceiling @peak | ceiling @74% |
+|---|---|---|---|
+| baseline Q4_K_S as shipped | 2.587 | 14.8 | 10.9 ✓ *matches measured 10.97* |
+| **P1**: attention + output + dense ffn → Q4_K (experts untouched, lossless-ish) | **1.957** | **19.6** | **14.5** |
+| P2: P1 + tiered experts (hot 25% 4-bit / cold 2-bit) | 1.705 | 22.5 | 16.6 |
+| P3: P2 + output-proj vocab prune to 40% | 1.504 | 25.5 | 18.8 |
+| P5: P1 + prune 4 of 40 layers | 1.761 | 21.8 | 16.1 |
+
+**P1 alone is a 1.32× bandwidth reduction → ~14.5 tok/s, from requantizing three
+tensor classes the project has never touched, with the expert path untouched.**
+
+## 3. Amortization — the only route past the single-stream wall
+
+P1 changes the *constant*; it cannot break the wall. For that, more than one token
+per weight pass:
+
+| tokens accepted per weight pass | effective tok/s |
+|---|---|
+| 2 | 29.0 |
+| 3 | 43.6 |
+| 4 | 58.1 |
+
+(both spec-decode and JEV's own multi-criteria batching)
+
+That is lossless by construction: speculative verification is distribution-preserving
+under exact rejection sampling, and `batch_logits_batched` is already verified
+bit-identical.
+
+## 4. Per-piece literature, with each source's own numbers
+
+### On-disk format / expert packaging
+- **flash-moe, tiered expert quantization** (`Alexintosh/flash-moe`, branch
+  `feature/tiered-expert-quantization`, "Implemented and verified") — hot ~25% of
+  experts by frequency (covering ~80% of activations) stay 4-bit, **cold experts
+  requantized to 2-bit: 1,769,472 → 983,040 bytes per expert, −44.4%**. Per-expert
+  kernel dispatch selects 4-bit or 2-bit dequant. Explicitly notes *"uniform 2-bit
+  breaks JSON/tool calling"* — tiering is what preserves quality. Also reports the two
+  negatives worth having: **LZ4 compression −13%** and **speculative prefetch −38%
+  (cache pollution, bandwidth waste)**.
+- **RotaryQuant** (arXiv:2608.08081) — a three-axis compression system whose
+  *weight* axis is exactly the mixed-precision assignment we lack: **4-bit dense
+  layers, 2-bit routed experts, 8-bit for the shared expert whose high activation
+  kurtosis resists aggressive compression**. Reported **9–19 tok/s interactively with
+  ΔPPL < 0.002** across three architecturally distinct models. This is the closest
+  published analogue to the per-piece policy argued here, and it independently
+  confirms the *asymmetry*: bit-width should follow architectural role, not be uniform.
+- **OmniMoE** (arXiv:2602.05711) — **expert-centric scheduling** inverts
+  token-centric execution to group physically nearby experts so expert blocks load
+  once and are reused across stacked tokens; reported **10.9× (73 ms → 6.7 ms)**.
+
+### Layer restructuring
+- **Pipeline-Native Transformers / cflow** (arXiv:2608.23841) — the direct treatment
+  of "restructure the layers". It notes CPU decode is bandwidth-bound (~1 TFLOP/s
+  compute vs ~50 GB/s memory) and **restructures the model into vertical pipeline
+  stages, cutting per-token weight bandwidth 9.00 → 4.50 MB/token (2.00×)** within
+  0.24 perplexity of the best baseline; **5.94 tok/s vs llama.cpp's 4.75** on a
+  32-vCPU Ice Lake box. It is architecture change plus a per-layer on-disk format
+  (`.cflow`), not a runtime flag.
+- **LayerSkip** (ACL 2024) — training recipe (layer dropout + early exit loss) making
+  early exit viable: **1.34–2.16× speedups on summarization and 1.82–2.16× on
+  coding/translation**. Early exit is the natural fit for a *classifier* like JEV,
+  which may not need all 40 layers to choose between two options.
+- **2D early-exit optimisation** (arXiv:2604.18592) — coordinates layer-wise and
+  sentence-wise exiting **specifically for classification tasks**. Directly on-point
+  for JEV's decision use case.
+- **llama.cpp `--prune-layers`** — the tool already exists upstream for exactly this.
+
+### Vocabulary / output
+- **VocabTrim** (arXiv:2506.22694) — reconstruct the LM head over a limited token
+  subset, **training-free**, for drafter speed.
+- **Vocabulary trimming by language heuristics** (arXiv:2311.09709) — VT reduces
+  small-model memory **by nearly 50%** with an upper bound of **25% generation-speed
+  improvement**.
+- llama.cpp already exposes `--token-embedding-type` and `--output-tensor-type`.
+
+### CPU compute path
+- **KTransformers** (SOSP'25, Tsinghua MADSys) — treats the CPU as first-class for
+  MoE, with **AMX-optimized kernels**; runs 671B DeepSeek-V3 on one 24 GB GPU plus
+  RAM. Its AMX backend offers **BF16 / AMXINT8** weight formats. Note: our i7-8700
+  (Coffee Lake) has **no AMX** (Sapphire Rapids+), so this specific lever does not
+  apply to this host — recorded so nobody re-tries it.
+- **llama.cpp `--no-extra-bufts`** — the weight-repack switch, already a measured
+  trap in this project (repack materialises experts into anonymous RAM and OOM-kills
+  a >RAM checkpoint during load).
+- **llama.cpp quantize `--tensor-type NAME=TYPE`, `--output-tensor-type`,
+  `--token-embedding-type`, `--prune-layers`, `--exclude-weights`, `--imatrix`** —
+  per-tensor control already upstream, which is what makes P1/P2 executable without
+  writing a quantizer.
+
+### Memory-bandwidth-bound CPU work generally
+- **Asynchronous KV cache prefetching** (arXiv:2504.06319, AAAI) — L2-cache-oriented
+  async prefetch for the memory-bound regime. Relevant because the KV stream, not
+  the weights, is the other always-active reader at long context.
+- The i7-8700-independent benchmark (saved in `sources/`) states the regime law:
+  *"Single-user CPU generation is memory-bandwidth-bound: the speed ceiling is set by
+  how many weight bytes you stream from RAM for each token"* and reports
+  **10.6 tok/s on a 30B-A3B in an i7-8700 with no GPU** — matching this project's
+  10.68 warm and this file's 10.97 measurement to within 4%.
+
+## 5. Ranked by bytes-saved × feasibility, all in one CPU-only premise
+
+| # | change | GB/tok | lossless? | executable today with |
+|---|---|---|---|---|
+| 1 | **attention+output+dense ffn → Q4_K** | −0.63 | ~yes (standard recipe) | `llama-quantize --tensor-type` |
+| 2 | **k≥2 tokens per weight pass** | ÷k | yes | spec decode, or `batch_logits_batched` |
+| 3 | cold experts → 2-bit, hot stay 4-bit | −0.31 | lossy, diluted | flash-moe's repack script (ported) |
+| 4 | output-proj / vocab pruning | −0.20 | needs decision check | `--output-tensor-type` + rebuild |
+| 5 | early exit for the classifier | −(layers skipped)/40 | needs decision check | `--prune-layers`; LayerSkip recipe |
+| 6 | 2-bit expert plane format | −0.28 | lossy | port flash-moe / `.moet2pf` |
+| 7 | io_uring + O_DIRECT for the disk tier | 0 (latency only) | yes | ctypes io_uring; Lidenburg precedent |
+| 8 | pass-pinned slot pool, W-TinyLFU admission | 0 (cap relief) | yes | engine patch |
+
+## 6. What this reorders
+
+The project's phases 1–3 target SSD read volume. On this host the measured binding
+constraint is **per-token RAM bandwidth**, so the highest-leverage changes are the
+ones that reduce *bytes per token* — and the top one is a quantization recipe for
+tensor classes nobody has looked at, executable with the upstream tool already on
+disk.
+
+**Two beliefs this pass overturned, both of them mine:**
+1. "Non-expert weights are ~10% of traffic" → they are **77.9%**.
+2. "The experts are the problem" → per token they are the **smallest term** outside
+   the router, because only 8 of 256 fire.
+
+## Sources
+
+`docs/research/sources/` — flash-moe tiered quantization, RotaryQuant (2608.08081),
+Pipeline-Native (2608.23841), LayerSkip (ACL 2024), 2D early exit (2604.18592),
+VocabTrim (2506.22694), vocab trimming (2311.09709), OmniMoE (2602.05711),
+KV async prefetch (2504.06319), llama.cpp quantize README, i7-8700 MoE-on-CPU
+benchmark, thecodacus MoE expert cache fork, Lidenburg three-tier cache.
+
+**Not claimed:** no published end-to-end number exists for a 35B-A3B-class MoE at
+20+ tok/s CPU-only with no second tier. The per-piece savings above are arithmetic on
+measured file bytes and measured bandwidth; the *quality* deltas of the lossy rows
+are the papers' own numbers, not ours — each needs its own decision-flip measurement
+on the four fixtures before any speed claim is made.
+# The assembled design — best-of the surveyed engines, on our substrate
+
+Assembled from source-level teardowns of every repo in `qwen3.6-35b-a3b-ssd-offload.md`
+(clones in `offload_projects/`, comparison in `OFFLOAD_PROJECTS_ANALYSIS.md`). Each element
+names its source and the measurement behind it. Nothing here is README-level branding —
+`slipstream-dwijenpatel` is a fork of TurboFieldfare, `Mference` carries the same files, and
+Edge0's prerouter accuracy is never measured in-repo. Where a number is a vendor claim it is
+marked as such.
+
+**Target substrate: llama.cpp/GGUF, x86 Linux, no Apple Silicon.** Edge0's only backend is
+MLX, which is the lock-in we are avoiding — so we take its *ideas*, not its code.
+
+---
+
+## 1. Container and I/O — the layer everything else depends on
+
+**Repack the experts into one container with per-expert contiguous slabs, 16 KiB aligned,
+plus a sidecar offset table.** This is the single most repeated structural idea in the set:
+`apus` packs gate_up+down into a 6,291,456 B slab and verifies single-shard placement;
+`flash-moe` uses a fixed 7,077,888 B stride with 9 components at fixed in-expert offsets;
+`qwen-fieldfare`'s `Q4EXP02` has a 4 KiB header and a uniform 1,769,472 B stride at 16 KiB
+alignment; `slipstream-schero94`'s PGRN v1 sets `PGRN_ALIGN=16384`; `siphon.cpp` uses a
+16 KiB-aligned sidecar manifest. Alignment is what makes a routed expert **one extent**.
+
+**Read with `pread`/`preadv` against that table — never mmap.** Every working engine does
+this. Evidence: `flash-moe` measured mmap of expert files as **5× worse** than pread; every
+working engine in the table uses pread; the only mmap entries are Edge0 (page-cache
+dependent) and `Qwen-MoE-Router-exp` (a stub).
+
+**Do not "fix" amplification by suppressing read-ahead.** Our own measurement: `MADV_RANDOM`
+cut reads 42.0 → 26.0 GB but cost 56.0 → **368.0 s**. The ~2.15× amplification on a >RAM MoE
+is **load-bearing prefetch**, not waste.
+
+**Fire the three projections concurrently** (`qwen-fieldfare`) to collapse 9 reads toward 3.
+**Optional: lazy `O_DIRECT` twin fds** (`samosa-chat` measured 0.8 GB/s buffered vs 2.3+ GB/s
+O_DIRECT). Note this is *per-expert* O_DIRECT reads — categorically different from our
+whole-file `O_DIRECT` load mode, which is SIGKILLed during load and closed.
+
+## 2. Slot pool — the engine owns the buffers, not the page cache
+
+**Bounded slot pool with a frequency-aware policy.** Plain LRU is **wrong** for
+layer-monotonic access — `q36` explicitly skips past layers during prefill for that reason.
+Take one of: LFU-aging (`Mference`, `slipstream-dwijenpatel` — halve counts every 32 plans);
+decayed routing frequency with LRU tiebreak (`q36`, halved every 16 tokens); SLRU
+(`qwen-fieldfare`); CLOCK-LRU-K with HOT/WARM tiers (`slipstream-schero94`); ARC + execution
+pins (`siphon.cpp`); per-layer LRU + LFRU pins + slab freelist (`apus`).
+
+**Floor the pool at 8 slots/layer — this is load-bearing, not a tuning knob.** With top-8
+routing, a layer below 8 slots misses *every* token (`qwen-fieldfare`).
+
+**A hard RAM admission gate.** `slipstream-schero94` refuses a cache that would induce
+swapping (`peregrine_admission.c:15-71`). `qwisp`'s field data is the argument: a 128-slot
+tier (~11.4 GB wired) **collapsed ~10× on a 16 GB Mac**; 64 slots recovered 6×.
+
+**This is the rule our own cache-warming tests hit from the other side.** Under a fixed cap,
+stage into the engine's own buffers — never the page cache. Layer-ordered
+`POSIX_FADV_WILLNEED` moved `read_bytes` by 0.14 GB across a whole run (the kernel caps an
+advisory window to a small multiple of `read_ahead_kb`), and a real `preadv` prewarmer was
+*worse*: 42.0 → 56.1 GB, because clean unreferenced pages are the first reclaim victims.
+
+## 3. Prefetch — and the one place the prior art does not answer us
+
+**Decode:** predict layer L+1 from L's router. `apus` reports **79.6% recall** — a real
+in-repo measurement, unlike Edge0's prerouter whose accuracy is never measured anywhere.
+`siphon.cpp` is better than fixed lookahead: it sets prefetch **distance** from an EWMA of
+transfer_us vs layer_compute_us. `q36` runs a dedicated prewarm pthread with a 512 MiB window
+and seeds a hotlist at startup. `qwisp` uses a bounded 2-arena background `pread` pipeline.
+
+**Prefill is the gap.** All of this is decode-time, and a one-token lookahead does nothing
+for a one-shot prefill — the whole layer's expert set is touched. `q36` is the only engine
+that even names the problem (it skips past layers during prefill). **Our expensive case is
+prefill**, and the prior art is silent on it. Any honest plan has to say what we do here
+rather than importing a decode optimisation and calling it solved.
+
+## 4. Scheduling — ours, and in none of the surveyed engines
+
+- **Thread oversubscription at 4/3 of hardware threads: 54.6 → 38.4 s (−29.6%), lossless.**
+  A thread waiting on a page fault is not runnable, so an expert-streaming decode needs *more*
+  runnable threads than cores. The prior art is silent because those engines drive I/O from
+  their own worker pools instead of demand faults. Reads unchanged (41.2–42.1 GB) — pure
+  scheduling, and proof the decode is not purely I/O-bound.
+- **`n_batch = n_ubatch = sequences × 512`: 67.0 → 42.0 GB.** `n_ubatch`, not `n_batch`, is
+  the parameter that decides I/O; the default 512 silently split a 908-token group into two
+  ubatches that each re-walked all 40 layers.
+
+## 5. The llama.cpp seam — built twice, by other people
+
+`siphon.cpp` intercepts the MoE top-k tensor in an eval callback, repoints `w->data` at a
+slot pool, shrinks `w->ne[2]`, and rewrites the id tensor to slot ids so `MUL_MAT_ID` sees a
+small pool. `slipstream-schero94` ships **the same trick as a 4,488-line patch against pinned
+llama.cpp `79bba02a6741`** — the closest thing to a drop-in, and the cheapest place to start.
+
+## 6. Lossy levers — held back until the lossless path is measured
+
+- **REAP expert pruning** (arXiv:2510.13999): one-shot, no fine-tuning, 50% compression at
+  ~96–97% retention.
+- **Batch-aware routing** (OEA arXiv:2511.02237, Lynx arXiv:2411.08982): decode latency is
+  linear in the count of *distinct* experts touched, not batch size; 39% decode-latency cut
+  on Qwen3-30B at batch 16 for <1 pp loss.
+
+## 7. Measured dead ends — do not re-litigate
+
+`MADV_RANDOM`; lossless compression of 4-bit streams (incompressible, and the best rANS
+decoder runs 114–120 MB/s against our 750 MB/s SSD); elaborate eviction
+(arXiv:2608.07911 — causal rules pick the optimal victim 3.4% of the time vs LRU's 20.6–22.1%);
+co-activation expert reordering (`flash-moe` measured 0%); page-cache warming from outside
+the engine (tested twice, worse both times); whole-file `O_DIRECT` load mode (SIGKILLed).
+
+---
+
+## Build order
+
+| phase | work | gate |
+|---|---|---|
+| 0 | **Run our decode path.** ✅ **Done 2026-09-22** — `scripts/probes/probe_decode.py`: cold under a verified-binding 8 GiB cap **3.67 tok/s at 212.6 MB/token**, warm **10.68**. | a real tok/s number on the goal axis |
+| 1 | Port `slipstream-schero94`'s 4,488-line slot-remap patch onto our llama.cpp | decode bytes fall at the same cap |
+| 2 | Repack experts into an aligned slab container + sidecar table (§1) | amplification < 1.2× |
+| 3 | Replace LRU with LFU-aging or decayed-frequency; floor 8 slots/layer; admission gate (§2) | hit rate + cap stability |
+| 4 | Decode prefetch: router L+1, adaptive distance (§3) | measured, against phase 0 |
+| 5 | Solve prefill — the gap no surveyed engine answers (§3) | — |
+| 6 | Only then: REAP / batch-aware routing (§6) | quality delta measured first |
+
+Phase 0 is complete (3.67 cold / 10.68 warm), so every later phase now has a baseline to be
+judged against. The measured gap to close: 212.6 MB read per generated token.
+
+A note on the survey size, since the count drifted in earlier revisions: **12 repositories
+were cloned, 11 were marked CERTIFIED, and there are ~9 distinct engines** —
+`slipstream-dwijenpatel` is a TurboFieldfare fork, `Mference` carries the same files
+verbatim, and `Qwen-MoE-Router-exp` is a stub.
+# The best approach — 20+ tok/s equivalent, CPU-only, no GPU, no training
+
+**Status: this is the answer.** Two independent sources confirm the target is real on
+this class of hardware, and the mechanism we were missing is now identified. Three of
+the four levers are training-free; the fourth is optional.
+
+---
+
+## 0. The target is real — two independent confirmations
+
+| source | hardware | result | memory |
+|---|---|---|---|
+| **Edge0 paper** (arXiv:2609.18063, Sept 2026, AutoArk) | Mac mini M4 Pro, 24 GB | **20.4 tok/s** at K=4; **14.9–17.7 tok/s** at K=8 | **2.9 GiB** peak active |
+| **i7-8700 CPU-only benchmark** (saved in `sources/`) | i7-8700, **no GPU** | **10.6 tok/s** on a 30B-A3B | — |
+
+The Edge0 abstract states it plainly: *"On a single 24 GB machine, Edge0 serves a 35B
+MoE at ≈20 tok/s inside 3 GiB of peak active memory."* That is our model class, our
+target, and 3 GiB is *less than our 8 GB cap*.
+
+**The most important comparison in the paper:** on the same machine, a vanilla
+mlx-lm server with all 19.5 GB of 4-bit weights **resident** decodes at **3.9 tok/s**
+occupying 18.2 GiB, while Edge0's streaming K=4 profile decodes at **20.4 tok/s**
+occupying **2.9 GiB**. *5.2× faster than the fully-resident baseline, using 6× less
+memory.* Streaming from SSD is not a tax to be minimised — **it is the winning
+configuration outright**, because the resident path's memory is unreclaimable and
+crowds out KV and the OS.
+
+This is why our 3.67 tok/s cold number is not a ceiling: it is the resident-ish regime
+losing. The offload regime, done properly, is 5× faster.
+
+---
+
+## 1. What we were missing: prediction **as** routing
+
+Edge0's core insight is not prefetching. It is this: under SSD streaming, layer N+1's
+experts must be chosen before layer N's output exists, so naive streaming **serialises
+disk latency into every layer of every step**. The fix is a **prerouter**: a small
+per-layer head (fc1 → erf-gelu → fc2, fp16, hidden 512) that predicts layer N+1's
+routing from layer N's hidden state **one token ahead**, and — the twist — the
+prediction is *consumed as the routing itself*:
+
+> "The prediction is consumed as the routing itself: the staged expert set and the
+> routed set are identical by construction, and the approximation that other
+> pre-gating schemes absorb at inference time through fallback loads and dropped
+> tokens is instead paid once, in training, and recovered there."
+
+Cost of the approximation is paid once, in training — so **zero drops at inference**.
+Measured advantage on a machine where the weights do not fit (16 GB MacBook M2,
+18.4 GiB checkpoint): **+80% / +82% / +84%** decode at K=2 / K=4 / K=8.
+
+**This is our regime exactly.** JEV runs cold under an 8 GB cap with a 20 GB
+checkpoint — "a machine on which the weights do not fit". Edge0's +80–84% applies to
+our 3.67 tok/s cold path, not to the 10.68 warm path.
+
+**A zero-training version exists.** The paper's head description: *"fc1 → erf-gelu →
+fc2, plus a linear residual path ℓ that the training script **warm-starts from the next
+layer's router weight** (its default is zero), so training begins from 'apply the next
+router directly to this hidden state'."* That warm-start point is itself a usable
+predictor: **feed layer N's hidden state through layer N+1's own router weights** to
+predict N+1's routing, one token ahead. No training, no parameters, no new checkpoint.
+Worth measuring first — it is the default initialisation the trained MLP only corrects.
+
+---
+
+## 2. The single biggest lever: training-free K-halving on *our exact model*
+
+**arXiv:2609.04575, "Training-Free Halving of Activated Experts in Fine-Grained
+Mixture-of-Experts Models"** (Xing Chen, Hengshuai Yao). Its primary object of study is
+**Qwen3.6-35B-A3B — our model**, quoted numbers and all:
+
+> "In Qwen3.6-35B-A3B, our primary object of study, all 40 layers are MoE layers with
+> 256 experts each and k=8 selected per token; the routed experts hold 32.2B of the
+> model's 35.9B parameters (89.6%), while each token touches only 3.1% of them."
+
+**The finding:** reducing k changes *two* things — which experts fire, **and the
+strength of the expert branch**, because renormalising over the surviving k implicitly
+recalibrates the output gain. Separate them by **activating the top k₁ experts while
+normalising by the probability mass of the top k₂ experts** (k₂ > k₁):
+
+> "On Qwen3.6-35B-A3B, reducing from 8 to 4 experts causes a **4.65-point MMLU drop
+> under standard renormalization but only 0.35 points with k₂=16**, while **halving
+> routed-expert compute**." (one integer; no parameters, no training, no measurable
+> compute overhead)
+
+Replicated on the 11× larger Qwen3.5-397B-A17B (10→5 experts: 0.55 points). And a
+warning worth keeping: *"perplexity and downstream accuracy favor different k₂,
+cautioning against selecting MoE compression settings using unlabeled text alone"* —
+pick k₂ on the labelled decision task, not on ppl.
+
+**Why this is decisive for us.** Edge0's *first* speed lever was narrowing K=8→K=4,
+and their own table prices it: **3.3 → 6.4 tok/s, "nearly doubles decode"**, with lower
+peak memory. But Edge0 could only do it by **training** — a three-phase distillation
+campaign (~2M SFT rows) producing a recovery LoRA, and they state the reason:
+*"below 4 bits, error grows until the model is unusable, and no post-hoc technique
+recovers it."* They paid for K=4 with a training run.
+
+2609.04575 shows that for **routing width specifically**, the training-free
+renormalisation fix recovers almost all of it: **−0.35 MMLU instead of −4.65**, on our
+exact checkpoint. So the one lever Edge0 needed a training campaign for, we get for
+**one integer**.
+
+Effect on per-token bytes: the expert term **0.573 → 0.287 GB/token** (8/256 →
+4/256 of 18.327 GB), measured from our own tensor table. That is a **pure
+bandwidth reduction on the binding constraint**, and it also halves expert *compute*.
+
+---
+
+## 3. Our own finding, still valid: the non-expert weights are 77.9% of traffic
+
+From the GGUF tensor table (`results/gguf-byte-breakdown.json`), per decode token:
+
+| class | read per token | share | stored at |
+|---|---|---|---|
+| attention / ssm | **1.379 GB** | **53.3%** | **Q8_0** |
+| experts (8 of 256 fire) | 0.573 GB | 22.1% | Q4_K |
+| output proj | 0.417 GB | 16.1% | **Q6_K** |
+| dense ffn | 0.134 GB | 5.2% | Q8_0 |
+| router | 0.084 GB | 3.3% | F32 |
+| token_embd | ~0 | 0% | Q8_0 (lookup, not a stream) |
+| **total** | **2.587 GB** | | |
+
+Cross-check: 2.587 GB/token × the measured 10.97 tok/s = **28.4 GB/s = 74% of
+DDR4-2400 dual-channel peak**. The two measurements corroborate each other
+independently, so the decomposition is sound.
+
+Requantising attention + output + dense ffn to Q4_K (experts untouched) removes
+**0.63 GB/token** — attention alone saves 0.548, the largest single non-expert win. The
+router must stay exact: it *chooses* the experts, so a precision change there flips
+decisions. token_embd is a trap — one row is read per token, so optimising it helps RAM
+footprint, not bandwidth.
+
+---
+
+## 4. The projection on our measured baseline
+
+Baseline: **10.97 tok/s**, CPU-only, `-ngl 0`, 6 threads, page-cached, measured twice
+(10.94 / 11.03 at 6/8 threads; 1.66–1.71× faster than the current default of 16).
+
+| step | change | GB/token | lossless? | projected tok/s |
+|---|---|---|---|---|
+| — | baseline Q4_K_S | 2.587 | — | **10.97 (measured)** |
+| 1 | **K=8→4 with k₁/k₂ renormalisation** (2609.04575) | 2.301 | −0.35 MMLU | 12.3 |
+| 2 | **+ attention/output/ffn → Q4_K** | **1.617** | Q4_K standard | **17.6** |
+| 3 | + tiered cold experts ⇒ 2-bit (flash-moe: −44.4%/expert) | 1.47 | lossy, diluted | 19.3 |
+| 4 | + expert-reuse-aware spec decode (EcoSpec, ≤1.62×) | — | lossless | **≥20 ✓** |
+
+Steps 1–2 are **1.60× on bytes alone, training-free, with the expert path and the
+router untouched**. Steps 3–4 clear 20 with margin. Step 4 is EcoSpec
+(arXiv:2607.12696), whose finding is exactly the objection we raised earlier against
+speculative decoding in MoE: confidence-driven draft selection causes **expert
+scattering** — draft tokens route to disjoint experts, so verification activates the
+*union* and *increases* weight traffic. EcoSpec folds predicted **marginal expert
+activation cost** into draft selection, favouring draft paths that reuse experts already
+covered by the verification set — *without changing the target verification rule* —
+for up to **1.62×** on DeepSeek-V3.1/Qwen3-235B/GPT-OSS-120B. That is what makes spec
+decode a *bytes* win in MoE instead of a bytes loss.
+
+**Honest note on the prerouter's value here:** its +80–84% removes *stall* time, not
+bytes. On the warm path we are bandwidth-bound at 74% of peak, so there is less stall
+to hide and the gain will be smaller than Edge0's. Its real target is the **cold,
+8 GB-capped** regime, where every token faults experts in from SSDs — that is exactly
+the "weights do not fit" case Edge0 measured, and it is where our 3.67 tok/s lives.
+
+---
+
+## 5. The remaining levers, priced
+
+| # | lever | source | gain | cost |
+|---|---|---|---|---|
+| 1 | **Persistent sticky-slot stack** (`incr_stack`) instead of per-step stack rebuild | Edge0 §3.1, App. B | **+34% decode** | engineering only |
+| 2 | **Cross-token prerouter, prediction-as-routing** | Edge0 §3.2 | **+80–84%** (weights-don't-fit regime) | needs a small head; zero-training warm-start variant available |
+| 3 | **K=8→4 with k₁/k₂ renorm** | 2609.04575 | **halves expert bytes + compute** | −0.35 MMLU, one integer, no training |
+| 4 | **EcoSpec cost-aware verification** | 2607.12696 | **≤1.62×** | draft model |
+| 5 | **Non-expert → Q4_K** | our measurement | **−0.63 GB/token** | standard quantize |
+| 6 | **Bigger contiguous reads** (O_DIRECT + io_uring, 576 KiB extents) | our `io_results.csv` | 1364–1696 → **3211–3383 MiB/s** (2.0–2.4×) | ctypes io_uring |
+| 7 | **Page-cache economics** — read in fewer, larger loads | Edge0 §5.3 | per-load cost = **1.17 ms + 1.33 ms × cold**; 0.75–4.4 ms | follows from 6 |
+| 8 | **Tiered experts** (hot 25% 4-bit / cold 2-bit) | flash-moe | **−44.4% per cold expert** | lossy; uniform 2-bit breaks tool calling |
+| 9 | **Expert-centric scheduling** | OmniMoE (2602.05711) | **10.9×** | batching regime |
+| 10 | **SpecPrefetch** router-preserving adapters | 2607.24787 | up to **+20%** | adapter training |
+
+### Things that looked good and are not
+- **LZ4 compression of experts**: −13% (flash-moe, measured).
+- **Speculative prefetch of experts**: **−38%** — cache pollution plus wasted
+  bandwidth (flash-moe, measured). Our own earlier negative result agrees.
+- **Uniform 2-bit experts**: **breaks JSON/tool calling** (`\name\` instead of `"name"`).
+- **Same-token pre-gating**: "every same-token variant we measured fell below a plain
+  LRU baseline" (Edge0) — head evaluation drains the pipeline and the next layer's
+  attention is not computed yet. One token of lead is the minimum that works.
+- **AMX kernels (KTransformers)**: our i7-8700 Coffee Lake has no AMX — Sapphire
+  Rapids and later only. Do not re-try.
+- **Whole-layer prefill**: fastest only when the checkpoint is page-cache-resident
+  (0.24 s vs 0.37 s warm) and **slowest when it is not** (5.3 s / 4.06 GiB cold vs
+  0.6–1.1 s / 0.4–0.8 GiB on-demand). Cold is our regime ⇒ on-demand.
+- **Thread count**: 16 is 1.66–1.71× *slower* than the 6–8 plateau in the
+  bandwidth-bound regime. The 4/3-of-cores knee only pays when threads block on page
+  faults.
+
+---
+
+## 6. Where the bytes go, and the order to attack them
+
+Bytes per token are the binding constraint. Ranked by bytes saved per unit of work:
+
+1. **attention/ssm Q8_0 → Q4_K** — 0.548 GB/token, no training, upstream quantize.
+2. **K=8→4 + k₁/k₂ renormalisation** — 0.286 GB/token, one integer, −0.35 MMLU.
+3. **output proj Q6_K → Q4_K** — 0.082 GB/token.
+4. **dense ffn Q8_0 → Q4_K** — 0.054 GB/token.
+5. **tiered 2-bit cold experts** — 0.145 GB/token, lossy, diluted.
+6. **output-proj / vocab pruning** — 0.201 GB/token, needs a decision-flip check.
+7. **early exit for the classifier** — 2604.18592 / LayerSkip; JEV's scorer may not need
+   all 40 layers to choose between options.
+
+Then, and only then, the stall levers (prerouter, sticky slots, io_uring) — which do
+not reduce bytes but stop waiting on them, and matter most in the cold 8 GB regime.
+
+---
+
+## 7. What is missing and what it would take
+
+- **Edge0's training code is not released.** The repo ships `prerouter/heads.py`,
+  `stager.py`, `install.py`, `state.py` (inference + install only) and the trained
+  adapters as `.safetensors`. `scripts/` holds only `convert_adapters_legacy.py`,
+  `upload_hf.py`, `strip_vision_weights.py`. So the training recipe is described in
+  §3.2/§4 of the paper but **not in the repo** — the zero-training warm-start variant
+  (§1) is therefore not a shortcut but the only route that avoids reproducing their
+  training campaign.
+- **The published checkpoints are MLX int4 with pre-trained adapters** — not loadable
+  in llama.cpp on CPU. The *mechanisms* port; the weights do not.
+- **K=4 needs the k₁/k₂ trick**, not plain truncation: plain 8→4 costs 4.65 MMLU
+  points on our model, which would destroy the decision accuracy JEV exists to serve.
+- **Spec decode needs EcoSpec-style costing**, or it loses: in MoE the union of
+  experts across a draft tree raises bytes/token.
+- **Every lossy item above needs its own decision-flip measurement** on the JEV
+  fixtures before any of it is claimed as a speed win. The papers' quality deltas are
+  their numbers on their tasks; ours must be measured on ours.
+
+**Not claimed:** no published end-to-end number exists for *this* exact configuration
+(CPU-only x86, no GPU, 8 GB cap, Q4_K_S llama.cpp, 20+ tok/s, single stream). The
+projection in §4 is arithmetic on measured bytes and measured bandwidth, with the
+sources' own deltas applied one at a time; the compound effect is not measured.
+
+---
+
+## 8. Does Memory Caching (arXiv:2602.24281) help? — verdict: not the tok/s, but yes the idea
+
+Fetched everything: the arXiv full text (via `pdftotext`, the HTML was truncated), the
+HuggingFace paper page, the OpenReview record (**ICLR 2026 submission #24014**, Oct
+2025), the community breakdown, and the one implementation that exists.
+
+**What MC is.** Segment the sequence, cache the **end-of-segment hidden-state
+checkpoints** of a recurrent model, and at each token retrieve from all cached states
+plus the current online state: `y_t = Agg({M_L^(1)…M_L^(s-1)}; M_t^(s); q_t)`.
+Four variants: Residual Memory, Gated Residual Memory (context-dependent gates
+`γ_t^(i) = ⟨u_t, MeanPooling(S^(i))⟩`), Memory Soup, and **Sparse Selective Caching
+(SSC)** — "a Mixture-of-Experts style router… measures the contextual similarity of
+each token to its past segments and chooses a subset". Complexity O(N·L), between the
+O(L) of RNNs and the O(L²) of Transformers.
+
+**Why it cannot lift our decode tok/s — four hard reasons:**
+
+1. **It is a training-time architecture change.** Every result is on 760M / 1.3B models
+   trained from scratch on 30B / 100B FineWeb tokens (SWLA, DLA, Titans, all retrained).
+   It is not a checkpoint transformation and cannot be applied to our Q4_K_S file.
+2. **It *adds* cost at inference.** "the retrieval process requires forward pass over
+   all cached memory and so needs O(N) operations per token." The authors' own framing:
+   MC variants "provide a middle ground between Transformers and RNNs" — i.e. they give
+   up part of the RNN's efficiency to buy recall. Its efficiency figure is *training
+   throughput vs Transformers* at long context, not decoding speed.
+3. **It does not reduce the binding constraint.** Our decode is weight-streaming-bound
+   at 2.587 GB/token. MC touches KV/state traffic, which at agent-scale context is the
+   smaller term. It cannot move 10.97 toward 20.
+4. **It doesn't port onto Qwen3.6 any more than onto any other trained model.** The
+   paper's own §4.1 shows the hybrid equivalence holds only "for an oversimplified
+   version"; the proof of concept is retrained models. Our 30 GDN layers were trained
+   with a fixed-size recurrence and cannot be re-cast without training.
+
+Confirmed on our own file: **no MTP tensors** — 733 tensors, `blk.0`–`blk.39`, none
+matching `mtp`/`nextn`/`eh_proj`. So the cheap-draft route needs the MTP variant of the
+checkpoint, not this one. (Also confirmed: **30 GDN layers + 10 full-attention at
+interval 4** — `attn_v` present only at blk 3,7,11,…,39.)
+
+**But three things from this branch do help, and two are measured:**
+
+**(a) Application-layer MC — the biggest measured lever for the OpenCode use case.**
+`growing-memory` (sypherin) implements MC's SSC variant *over the prompt*: chunk
+history, compress each chunk to a checkpoint, retrieve the relevant few. Published
+numbers: **95% accuracy at 1,027 tokens vs 90.3% at ~15,000 for full context = 14.6×
+fewer tokens and higher accuracy than stuffing**; a second benchmark **100% at 384
+tokens (7× fewer)**. The repo's own note: *"The paper proves the saving in theory but —
+as the ICLR reviewer flagged — never measured real tokens/latency. This repo does."*
+
+Why this is the one that matters: a coding agent **resends a large prompt every turn**,
+and under SSD offload **prefill is the expensive phase**. Cutting request tokens 14.6×
+is a direct cut in per-turn prefill traffic — and it *raises* the decision quality the
+JEV scorer is graded on. This is the agent-layer half of the problem that no amount of
+expert-prefetch engineering addresses.
+
+**(b) The sibling family is built for our exact architecture** (the real find):
+
+| paper | what | number |
+|---|---|---|
+| **DASC** (2608.30386) | Decay-aware state compression for **Gated DeltaNet** + Kimi Delta Attention — derives retention horizons from the weights, packs long-horizon state units into a ragged checkpoint layout | **KDA state compressed 2.63×**; at fixed state-checkpoint budget **TTFT −42.6%, input throughput +68.4%** |
+| **MARCH** (2608.12435) | Content-routed **state anchors** over Gated DeltaNet — attends over cached state anchors with content-conditioned keys; "consistently outperforms multiple linear attention variants" on LongBench / in-context retrieval | architecture-level (retrained) |
+| **DART** (2608.02032) | Decodes token-conditioned keys *and* values from Mamba-2 chunk states and does attention over them | **75% savings at chunk 256 / state 128** — our `state_size` is exactly **128** |
+
+DASC is the directly relevant one: the *problem* it solves is that "a recurrent state is
+overwritten as tokens arrive and does not preserve earlier prefix boundaries. Prefix
+caching therefore materializes full state checkpoints at regular token intervals" — and
+**prefix reuse across turns is precisely what a coding agent needs.** Under our 8 GB
+cap, state checkpoints compete with the expert cache; DASC's decay-aware packing is how
+you get both.
+
+**(c) MC's *selector* is the same shape as our cache-admission question.** SSC =
+"router measures contextual similarity… chooses a subset" — the retrieval policy over a
+set of cached states. Our slot pool needs exactly a relevance-gated admission policy
+(pass-pinned + similarity), and DASC/MARCH supply the GDN-specific scoring.
+
+**Net:** MC does not make our decode faster and cannot be bolted on. Its *concept* pays
+in three places that do matter: the agent-side 14.6× prompt-token cut (measured), the
+GDN-specific state/prefix-reuse path (DASC: −42.6% TTFT), and the admission-policy
+shape.
+
+---
+
+## 9. The metric was wrong — for a coding agent it is not single-stream decode tok/s
+
+Reframing for the OpenCode use case changes which levers matter. From
+`slipstream-schero94`'s measured coding-agent run:
+
+| measured, coding-agent workload | number |
+|---|---|
+| **~30k-token agent prompt prefill** | **75 → 208 tok/s (2.7×)** with `ubatch 2048` + parallel I/O threads |
+| decode vs cache size | 2 GiB → ~5.5 tok/s @ **21% hit**; 10 GiB → ~13 @ **78%**; 14 GiB → ~19 @ **86%** |
+| storage tier (PGRN) | USB SSD 0.72 → internal NVMe 1.95 (**2.7×**) → +DFlash spec draft 2.36 (**3.3×**) → +larger cache 2.83 (**3.9×**) |
+
+**Cache hit rate, not raw decode, is the control variable** — and it is the one we are
+starving under an 8 GB cap. Note also that `ubatch 2048` + parallel I/O threads moved
+prefill 2.7× — a config change, not a new algorithm.
+
+**The on-disk layout law (mbolt), which is quantified and self-limiting:**
+
+> `speedup = 1 / ((1 − s) + s/g)` — `g` = per-read coalescing gain, `s` = cold-read share.
+> "Coalescing pays **iff** misses are latency-bound: fine-grained MoEs and low-bit quants
+> (~≤ 1 MB slices), not big-expert models."
+
+Measured points: one expert = **9 sub-slices** (gate/up/down × weight/scales/biases),
+3.19 MiB, **scattered across a 2.5 GB in-file span**; coalescing to one contiguous block
+cuts per-cold-expert I/O **3.0×** (1396 → 463 µs) → **~20% decode, ~10% prefill**, 9×
+fewer decode read-ops (486 → 54/token). On Qwen3-235B at 0.2 resident: **+32.3% decode,
+−26.3% TTFT**. It weakens with slice size (gpt-oss-120b, 4 MB slices: only +9.7%).
+
+**Our expert slice is 576 KiB (589,824 B, 16 KiB-aligned) — squarely in the regime where
+this pays.** And the 6 tiny 32 KiB scales/biases reads per expert at 96 µs each are pure
+IOPS waste, which our `pread`/`io_uring` measurements already showed is where the
+latency lives (4 KiB reads: 53–55 MiB/s; 576 KiB: 1364–1696 MiB/s pread, 3211–3383
+io_uring).
+
+**The predictor, zero-training (PILOT family).** Router-lookahead: run layer L+1's
+router on layer L's pre-MoE state, normalised with L+1's layernorm. Recall measured at
+**73.6%**; a two-step refinement (compute the **shared expert** first — already
+resident, zero disk I/O — add it to the residual, then route) gives **76.7%, +3.1
+points**. Independent confirmation: "Speculating Experts" (arXiv:2603.19289, UMD/LLNL)
+calls it the "quasi-hidden state". Reference points: predicting from the previous token
+= **36.3%**; from the layer input skipping attention = **81.7%**.
+
+Critical honest caveat from the implementer, which matches our situation: *"No tok/s
+improvement on our hardware… `cap lowered 64->2` — with 24 GB RAM, the expert cache
+holds only 2 experts per layer. There's almost nothing to prefetch into; disk bandwidth
+is already saturated — WILLNEED hints don't create more bandwidth."* **This is a
+hardware ceiling, not an algorithm failure** — and it is exactly why cache *size* and
+coalescing come before prediction in our order. Prediction only converts to tok/s once
+there is a cache to prefetch into and the reads are latency-bound.
+
+## Sources
+
+`docs/research/sources/` — Edge0 paper (arXiv:2609.18063) + `docs/prerouter.md` +
+`docs/streaming.md`; K-halving (arXiv:2609.04575, fulltext); EcoSpec (arXiv:2607.12696);
+SpecPrefetch (arXiv:2607.24787); S2-MoE (arXiv:2608.15018); Memory Caching
+(arXiv:2602.24281); flash-moe tiered quantization; Pipeline-Native (2608.23841);
+OmniMoE (2602.05711); RotaryQuant (2608.08081); LayerSkip (ACL 2024); 2D early exit
+(2604.18592); VocabTrim (2506.22694); i7-8700 CPU-only MoE benchmark; Kimi K3 8 GB C99
+engine; Colibri.
+# The CPU-only ceiling: what 20+ tok/s actually requires
+
+**Question:** can this box serve Qwen3.6-35B-A3B CPU-only, experts off NVMe, under a
+hard RAM cap, at 20+ tok/s?
+
+**Answer, measured and arithmetic:** **not single-stream at Q4_K_S.** The binding
+constraint is not the SSD — it is DDR4-2400 dual-channel RAM bandwidth. But 20+ is
+reachable two ways, and both preserve the CPU-only premise: **amortise the weight
+pass over more than one token (JEV parallelism / speculative verification)**, or
+**reduce bytes per token below the current quant**.
+
+## 1. The arithmetic (from the file, not the label)
+
+Parsed from the GGUF tensor table:
+
+| quantity | value |
+|---|---|
+| total params | 34.66 B |
+| active params per token (A3B) | ~3.3 B |
+| file size | 20.893 GB |
+| **effective bits/weight (Q4_K_S as shipped)** | **4.822** |
+| **active weight bytes streamed per token** | **1.989 GB** |
+| routed expert set | 18.327 GB (40 × 256 × 3 × 576 KiB slices) |
+
+So a single decode token must stream **1.99 GB** of weights. At 20 tok/s that is
+**39.8 GB/s**, against a **DDR4-2400 dual-channel theoretical peak of 38.4 GB/s** —
+**104% of peak**. It is arithmetically impossible, not merely hard.
+
+## 2. The ceiling, measured three ways
+
+**(a) Our own thread sweep**, CPU-only (`-ngl 0`), page-cached, 135-token prefill +
+32-token decode, `-ub 512`, run twice:
+
+| threads | decode tok/s (run 1) | decode tok/s (run 2) | achieved RAM BW |
+|---|---|---|---|
+| 6 | 10.94 | 10.97 | ~21.8 GB/s |
+| 8 | **11.03** | 10.75 | ~21.7 GB/s |
+| 12 | 7.73 | 7.17 | ~14.8 GB/s |
+| 16 | 6.43 | 6.62 | ~13.0 GB/s |
+| 20 | 6.38 | — | 12.7 GB/s |
+
+Two runs agree within ~3%. The shape is a **plateau at 6–8 threads (~10.8–11.0
+tok/s) then a cliff at 12**, not a gentle decline. This host has **6 physical cores /
+12 hardware threads**, so the cliff sits exactly at the point where thread count
+crosses the physical-core count: 6–8 is at or barely past the cores, 12 is full SMT,
+16–20 oversubscribes past all hardware threads. In a bandwidth-bound loop, extra
+threads contend for the same memory controller and buy nothing.
+
+The magnitude of the regression: the current default of **16** is **1.66–1.71×
+slower** than 6.
+
+**(b) Independent confirmation on the same CPU.** An external benchmark of
+`Qwen3-30B-A3B` on **an i7-8700 with no GPU**, 6 threads, reports **10.6 tok/s**,
+and states the ceiling directly: *"Single-user CPU generation is
+memory-bandwidth-bound: the speed ceiling is set by how many weight bytes you stream
+from RAM for each token"* and *"read ~3.3B of weights per token and you get ~10.6
+tok/s, whether those weights came from a dense 3B model or were routed out of a 30B
+one."* Source: `docs/research/sources/https-inventivehq-com-blog-moe-on-cpu-benchmark.md`.
+
+**(c) The project's own warm figure** is 10.68 tok/s — same number, third
+independent path. Three measurements, one ceiling.
+
+Our achieved 21.8 GB/s is **57% of DDR4-2400 theoretical peak**, which is a normal
+fraction for random-ish expert row reads. Getting to 20 tok/s single-stream would
+need 104% of peak. **The SSD is not in this equation at all.** No I/O optimization —
+io_uring, repacking, prefetch, slot pools, W-TinyLFU — can move a bandwidth wall
+that sits above the hardware's maximum.
+
+## 3. A config regression this exposed
+
+`llamacpp_backend._default_threads()` returns `max(4, nproc * 4 // 3)` = **16** on
+this host, on the strength of the measured 4/3 knee (54.6 → 38.4 s, −29.6%).
+
+That finding is real **but regime-specific**. Above, in the bandwidth-bound regime,
+16 threads costs **1.66×** against 6 (6.62 vs 10.97 tok/s). The 4/3 oversubscription
+pays only when threads are *blocked on page faults* — it keeps the device queue fed.
+Once the weights are in RAM there are no faults to hide, and the extra threads
+simply contend for the same memory controller.
+
+**The two regimes want opposite thread counts**, and the current code hard-codes the
+I/O-bound answer for both. Thread count should be selected by regime, not by a
+constant: ~6 (physical cores) when bandwidth-bound, 4/3 × nproc when fault-bound.
+This is a one-line change with a measured 1.66× on one side of it.
+
+Corroboration: the external i7-8700 benchmark explicitly used *"6, matching the
+physical cores (more threads hurt)"*.
+
+## 4. The two routes to 20+, both CPU-only
+
+### Route A — amortise the weight pass (this is JEV parallelism)
+
+If one weight pass produces more than one useful token, the per-token bandwidth cost
+divides by the number of tokens per pass:
+
+| tokens accepted per weight pass | effective tok/s at the 10.97 ceiling |
+|---|---|
+| 2 | 21.9 |
+| 3 | 32.9 |
+| 4 | 43.9 |
+
+Two published mechanisms:
+
+- **Speculative decoding** — llama.cpp ships it; the project's survey cites
+  **3.1–3.4× end-to-end on CPU** from the EAGLE-style family. Verification batches k
+  draft tokens through one target pass, and MoE routing means the k tokens' expert
+  union is read **once**. At k=2–4 accepted, this clears 20+ on its own.
+- **JEV's own structure — N criteria per pass.** `score_shared` already batches
+  branches into one `llama_decode`, and `batch_logits_batched` exists precisely so
+  *"the routed experts for the whole set are read once per forward pass instead of
+  once per criterion."* The project's own measured throughput table:
+
+  | criteria | token-forwards | tok/s |
+  |---|---|---|
+  | 4 | 908 | 23.0 |
+  | 8 | 1,816 | 27.2 |
+  | 16 | 3,632 | 28.6 |
+
+  Those are *prefill token-forwards*. In decision terms, 4 criteria in 39.4 s cold =
+  0.102 decisions/s. The lever is not the per-pass rate but **criteria per pass**:
+  at 16 criteria per pass the same weight traffic yields 16 decisions. **JEV's
+  product metric is decisions per GB read, and it is already the best-amortised path
+  in the project** — it just has never been stated in those units.
+
+### Route B — reduce bytes per token
+
+| quant | bits/weight | GB/token | ceiling at 57% of peak |
+|---|---|---|---|
+| Q4_K_S (current) | 4.82 | 1.989 | ~16.4 |
+| Q3_K | 3.40 | 1.403 | ~23.3 |
+| ~2.1 bpw (IQ2-class) | 2.10 | 0.866 | ~37.7 |
+
+Route B is **lossy** and belongs in a separate tier behind a decision-flip check on
+the four fixtures — not mixed into a lossless claim. Route A is not lossy at all
+(speculative verification is distribution-preserving under exact rejection sampling,
+and JEV batching is already verified bit-identical).
+
+## 5. What this means for the build order
+
+The project's phase list targets **bytes read from SSD**. On this host the measured
+constraint is **bytes streamed from RAM**, and the SSD numbers (41 GB per pass,
+212.6 MB/token) are a *symptom* of the RAM cap forcing re-reads — not the root cost.
+
+That reorders the phases by measured leverage, without changing the CPU-only premise:
+
+1. **Fix the thread regime** (§3) — one line, measured 1.66× in the bandwidth-bound
+   case, and it makes every later measurement honest.
+2. **Batch criteria per pass** (Route A, JEV parallelism) — code already exists in
+   `batch_logits_batched`; the gate is `n_seq_max`, not a new subsystem.
+3. **Speculative verification** (Route A) — the published, measured path to 3× on
+   CPU, and the project's survey already ranks it the highest-leverage import.
+4. **Then** the phases aimed at SSD read volume (slot remap, repack, io_uring),
+   because they attack the 41 GB symptom and cannot exceed the bandwidth ceiling.
+
+## 6. Layer restructuring — what the literature actually offers
+
+Three papers found in this pass, with their own reported numbers:
+
+- **Pipeline-Native Transformers / cflow** (arXiv:2608.23841) — the direct answer to
+  "restructure the layers". Single-token CPU decode is bandwidth-bound; the paper
+  **restructures the model into vertical pipeline stages so per-token weight
+  bandwidth falls 9.00 → 4.50 MB/token (2.00×)** within 0.24 perplexity of the best
+  baseline, reaching **5.94 tok/s vs llama.cpp's 4.75** on a 32-vCPU Ice Lake box.
+  The key point: it is *architecture change + a per-layer on-disk format*, not a
+  runtime trick — and its gain is bounded by the same bandwidth wall, so it improves
+  the ceiling rather than escaping it.
+- **OmniMoE Expert-Centric Scheduling** (arXiv:2602.05711) — **inverts execution from
+  token-centric to expert-centric**, grouping physically nearby experts so a block of
+  expert weights is loaded once and reused across stacked tokens; reported **10.9×
+  (73 ms → 6.7 ms)**. This is the same amortisation as Route A, implemented as a
+  scheduler.
+- **MoE-Prefill / AsyncEP** (arXiv:2605.02960) — the publishable answer to the
+  prefill expert-set problem: it **decouples expert placement from activation
+  routing**, keeping only upcoming layers' expert weights resident and gathering in
+  the background. Directly relevant to JEV, whose hot path is prefill.
+
+Caveat on all three: **none is measured on a single NVMe at ~2.4 GB/s with no DRAM
+tier.** Pipeline-Native's baseline is a page-cached Ice Lake server; OmniMoE's is a
+GPU. Their mechanisms port; their numbers do not transfer.
+
+## 7. Honest bottom line
+
+- 20+ tok/s **single-stream CPU-only at Q4_K_S is impossible here** — needs 104% of
+  DDR4-2400 peak. Stated plainly rather than worked around.
+- 20+ is reachable at **k≥2 tokens per weight pass** (spec decode or JEV's criteria
+  batching) **without any lossy change**, and that is already the project's own
+  architecture.
+- Or at **Q3_K-class quant** (lossy, needs a decision-flip check).
+- The thread default is a measured regression in the bandwidth-bound regime.
+
+## Sources
+
+Saved full text under `docs/research/sources/`:
+
+- `https-inventivehq-com-blog-moe-on-cpu-benchmark.md` — i7-8700, no GPU, Qwen3-30B-A3B
+  10.6 tok/s, bandwidth-ceiling argument
+- `https-arxiv-org-pdf-2608-23841.md` — Pipeline-Native Transformers (vertical
+  pipeline, 2.00× bandwidth reduction)
+- `https-arxiv-org-pdf-2602-05711v2.md` — OmniMoE expert-centric scheduling (10.9×)
+- `https-arxiv-org-html-2605-02960.md` — MoE-Prefill / AsyncEP
+- `https-github-com-thecodacus-llama-cpp-blob-perf-README-md.md` — MoE expert cache
+  fork, measured slot-count table (+21% to +78%)
+- `https-github-com-Lidenburg-llama-cpp.md` — three-tier VRAM/RAM/disk cache using
+  **io_uring + O_DIRECT** for the disk tier, `madvise(MADV_DONTNEED)` to release
+  mmap'd pages, and a measured **~1% hit rate for next-layer prefetch** (a negative
+  result worth having)
+- `https-huggingface-co-blog-Doctor-Shotgun-llamacpp-moe-offload-guide.md`
+
+Not verified / not claimed: no published figure found for single-stream CPU-only
+decode of a 35B-A3B class MoE at 20+ tok/s without a second tier; the spec-decode
+3.1–3.4× figure is the project's own survey citation and was not re-measured here.
+# DEVELOPMENT_LOG
+
+## Session Handoff — 2026-09-22 (d) — the first decode number, and a working System One endpoint
+
+### Goal
+
+Four things, in the order they were asked for: (1) **measure generation**, which had never
+been done; (2) the **research mandate** — decompose the architecture into ~10 parts and find,
+for each part, where the same primitive is solved better elsewhere and what is importable;
+(3) **use JEV**, i.e. wire the typed-decision path up so the cheap path is actually reachable;
+(4) do (3) **properly, not crude** — and do not stop until it works end to end.
+
+### Failed Paths
+
+1. **The `subprocess.PIPE` deadlock — the whole "shim never became healthy" failure.**
+   `test_systemone_shim.py` started the shim with `stdout=subprocess.PIPE` and drained that
+   pipe only *after* `server.poll()` returned non-None. The checkpoint load prints ~800 lines
+   of llama.cpp loader output, which filled the 64 KiB pipe buffer, so the shim **blocked on
+   write before it ever bound the socket** — and the process therefore never exited, so the
+   drain never happened either. It presented as "shim never became healthy" plus a **masked
+   exit 0** (the run was piped through `| tail -70`). Diagnosis took a foreground run with
+   the shim's own output going to a file, where it loaded normally in ~3 s. Fix: log to a
+   file, `tail` it only on failure, and close it in `finally`.
+2. **`ThreadingHTTPServer` over a non-thread-safe llama.cpp context** — the first draft of
+   the shim. One context, many request threads. Fixed with a module-level `call_lock` around
+   `scorer.call(rows)`, and the endpoint now advertises that calls are **serialised**.
+3. **Two contract shapes I guessed instead of reading.** `score.criteria` is an **ordered
+   array** of level descriptions, not a numeric-keyed map; and `state` is **not necessarily a
+   string** — it may be a string, an object, or an array of strings. Both were wrong in the
+   first draft and both are now handled, with the array form treated as canonical.
+4. **`--max-tokens` was called "the last unmeasured lever" for decode. False.** Grep showed
+   **no generation code existed in the project at all**; `--max-tokens` is an *input* prompt
+   cap. Generation was not under-measured, it was *unreachable* — there was no decode loop.
+5. **My "arithmetically impossible" claims about Edge0's prefill figure — retracted.**
+   3,300 tok at 113 tok/s is 29.2 s, so even a full 20.88 GB read is 0.72 GB/s, ~7× under an
+   M4 Pro SSD. Corrected in `DEVELOPMENT_LOG.md` and `SEMIF_LLAMACPP_SSD.md` §4. Both numbers
+   are also on a 24 GB page-cached box, so the honest like-for-like is **our warm 10.68 vs
+   Edge0's 14.9 — 1.4×, not 3.5×**.
+
+### Final Solution
+
+**1. Generation, measured — `scripts/probes/probe_decode.py` + `run_decode.sh`.** Cold, page
+cache evicted, under an **8 GiB cap verified binding** (`memory.peak` exactly 8 GiB,
+`memory.events max` 25,499): **3.67 tok/s at 212.6 MB per generated token**; prefill 25 tok in
+7.52 s reading 9.82 GB; load 19.87 s; 44.32 GB total process read. Warm, no cap: **10.68 tok/s,
+0 bytes read**. The 4.2 tok/s ceiling I had computed from 2.4 GB/s ÷ 566 MB/token was sound and
+the measurement lands under it.
+
+**2. The decomposition — `docs/ARCHITECTURE-DECOMPOSITION.md`.** Eleven parts, each with
+Primitive / Who else solves it / Best-in-class / Import / Evidence. The load-bearing findings:
+io_uring qd=128 at **3,807 MiB/s** vs sync `pread` 111 MiB/s — and our 4/3-nproc result is the
+*substitute* for missing queue depth, not a law; **W-TinyLFU** (ARC is IBM-patented, excluded);
+the **QStore/ZipNN** correction that our rANS dead-end tested the wrong stream (the 4-bit
+quants are incompressible, the **fp16 scales/mins are not**); and **speculative verification**
+(SpecMoE ~2.25× on SSD, 76.73% transfer reduction) as the highest-leverage import — it attacks
+the measured 212.6 MB/token directly and **none of the surveyed engines does it**. Plus the
+necessary counterweight: SSD offload costs up to **12× the per-token energy** of HBM.
+
+**3. A working System One endpoint — `resident/systemone_shim.py`.** Serves `POST /v1/systemone`
+and `GET /v1/models` with all three question types in their exact contract shapes (`noul`
+returns a bare float with no confidence; `choice` returns a caller key + probabilities; `score`
+returns a probability-weighted mean over ordered levels + `legend` keyed by index-as-string).
+422 `invalid_request` on invalid input, `usage.output_tokens` **0 by construction**, extras
+under a non-conflicting `local` key. `resident/test_systemone_shim.py` passes **26/26** checks
+against the real checkpoint, including a semantic winner check (`e1`, the empty destination
+input), all four validation cases, and `state` as string, object and array.
+
+**Why this is the answer to "JEV is to make it faster":** a decision is **one prefill pass**
+whose cost does not grow with the option count, while generating the same answer would pay
+**212.6 MB and ~0.27 s per token**. The scorer path is not a compromise against generating —
+it is strictly the cheaper route to the same typed answer.
+
+### Unresolved
+
+- **We still do not beat Edge0.** 10.68 warm vs 14.9 — a **1.4×** gap, and it is an
+  **algorithm** (prerouter + fixed staged slots), not a platform, so it ports to llama.cpp.
+  Not started.
+- **Prefill prefetch is unsolved everywhere.** Every published prefetcher (GrASP, Pythia,
+  SeLeP) is decode-time; our expensive case is prefill, where a one-token lookahead is
+  useless. The prior art is silent on it.
+- **Nothing is pushed.** The working tree has the new probe, the shim, the test and the doc
+  corrections; no commit or push was made this session.
+- **The shim has no auth.** Errors are modelled (401/429/529 documented) but unimplemented;
+  it binds `127.0.0.1` only, which is the reason it is acceptable for now.
+
+## Session Handoff — 2026-09-22 (c) — residency, and pricing the read amplification
+
+### Goal
+
+Branch `resident-expert-serving`: implement the serving path that "leaves SemIf
+behind", and improve the measured results under the standing premise — **8 GiB RAM
+plus SSD**, no Apple Silicon lock-in.
+
+### Failed Paths
+
+1. **The duplicate-expert-storage hypothesis is dead.** `scripts/probes/gguf_tensor_layout.py`
+   reads only the header and tensor table: 733 tensors, extents sum to 20.88 GB against a
+   20.89 GB file, 0.0 MB unaccounted, **0 identical ranges and 0 partial overlaps**, and
+   only three routed suffixes per layer (`ffn_gate_exps` / `ffn_up_exps` / `ffn_down_exps`).
+   So the amplification is not double-stored weights, and `ffn_gate_up_exps` is an internal
+   fused *view*, not a second copy. Cost of learning this: one probe, plus a count printed
+   as `-40` because `"exps"` and `"shexp"` are distinct substrings, so the two filters do
+   not nest — read `len(experts) - len(shared)` and it looks negative.
+2. **Inter-call page reuse does not exist and cannot be engineered into existence.**
+   Three resident calls read **41.069 / 41.090 / 41.083 GB** — flat to 0.05%. The reason is
+   structural, not a tuning miss: a pass touches ~41 GB against an 8 GiB cap, so it evicts
+   its own early pages before it finishes, and call 2 then starts at layer 0 where nothing is
+   warm. Any plan that assumes residency compounds must die here.
+3. **`direct_io` is closed, not merely untested.** Listed as an open lever in two earlier
+   sessions. Under the 8 GiB cap it is **SIGKILLed during load** (exit 137): `O_DIRECT` reads
+   every tensor into allocated buffers instead of mapping them, needing
+   `CPU model buffer size = 19914.65 MiB` (20.88 GB) of anonymous RAM, and it dies in
+   `load_all_data` before writing a single ledger line. It is a load mode for hosts that can
+   hold the model, not for this regime.
+4. **`use_extra_bufts` (repack) stays dead** at this size — it needs the model resident.
+5. **`read_ahead_kb` stays dead** — WILLNEED is capped at ~128 KB; moved `read_bytes` by
+   0.14 GB. Re-confirmed as not worth retrying.
+6. **My own first read model was wrong.** "18.33 GB fixed sweep + 25.4 MB/token" rested on
+   two points and on the wrong token denominator. `branch_logits_batched` gives every branch
+   the *whole* prompt as its own sequence, so the honest counter is `batched_tokens`
+   (= suffix + prefix × rows), not `true_suffix_tokens`. Refit over four single-pass runs:
+   **read = 13.8 GB + 26.9 MB × token.**
+
+### Final Solution
+
+A resident scorer plus a strictly serial sweep, both measured cold under
+`systemd-run --scope -p MemoryMax=8G -p MemorySwapMax=0` with the checkpoint evicted
+once beforehand via `posix_fadvise(DONTNEED)`.
+
+**Residency buys the load, and exactly the load.** ~59 s → ~38.5 s per call (**1.5×**);
+`process_read_bytes` after call 1 was 61.96 GB, reproducing the published 61.6 GB, so the
+instrument agrees with the baseline it measures. Scoring is SemIf's own path called as a
+library — argmax and `full_vocab_argmax_id` identical on all four fixtures.
+
+**One correction I made to my own account, after measuring instead of asserting.**
+I first wrote here that probabilities differed from the committed baselines because those
+ran `threads=6` and this runs 16. **That is wrong.** The `threads=16` output is
+*bit-identical* to `results/decisions.batched.jsonl` on all four prompts, all 17 printed
+digits — thread count does not move these logits at all. The only spread in the whole set
+is *batched* vs the pre-batching single-sequence path: at most **0.001%** on the winning
+probability, no decision changed. That difference is the earlier batching patch, not this
+work, but this path depends on batching so it is disclosed rather than implied. And the
+lossless claim is weaker than it sounds: all four fixtures sit at p ≈ 0.99998 for the
+winner, so a near-tie fixture would be the real test and there is none in `examples/`.
+
+**Batching is the other available win, and it is free.** Per-criterion read falls
+17.5 → 10.3 → 8.0 → 6.9 GB for 1 / 4 / 8 / 16 criteria (up to **2.5× less I/O, 2.0× less
+time per criterion**), because the marginal token gets *cheaper* as the batch grows
+(35.9 → 25.4 MB/token) — the fixed term is genuinely shared. It needs `SEQ_MAX` to cover the
+batch: a 16-criterion batch at `SEQ_MAX=8` pays two full sweeps.
+
+**`SEQ_MAX ≥ batch width` is correct but small:** 128.3 → 110.2 GB and 127.1 → 119.96 s
+(**1.06×**) — the saving is exactly one sweep's worth of bytes, but the single 8192-wide
+ubatch runs at 0.92 GB/s against 1.01 GB/s, so 14% of the bytes buys 6% of the time.
+
+**The amplification is two ~2.1× factors, and the cap table separates them** (top-8 of 256,
+confirmed from the GGUF): the routing selects ~**9.3 GB** of expert bytes for the 4-criterion
+fixture; the same run reads **19.3 GB** at a 16 GiB cap (gather overfetch) and **41.0 GB** at
+8 GiB (cap-driven intra-pass re-read). Removing both is worth **2.1× conservatively, ~4.4× if
+overfetch also falls** — at the same 8 GiB, with no extra RAM. It needs an expert-ordered
+decode: group the batch's tokens by selected expert, fetch each slice once, use it for every
+token that wants it, drop it.
+
+### Unresolved
+
+- **The expert-ordered decode is not started.** It is the only remaining lever on the read
+  axis, and it is a decode rewrite, not a flag: llama-cpp-python 0.3.35 ships prebuilt `.so`
+  files, so it is a rebuild-and-patch project. Every working engine in the survey does
+  exactly this; none of them is a llama.cpp flag.
+- **The ~2.1× overfetch is inferred from the cap table, not directly observed.** Confirming
+  it needs per-layer read tracing.
+- **A smaller quant is an untested lever with a real number behind it.** The expert set
+  scales with bpw and the amplification is cap-driven, so a ~25% smaller expert set should
+  cut reads ~25–33%. Not tested: it trades answer quality, and that is the user's call.
+- `--max-tokens` has never been measured.
+  **Correction (2026-09-22, session d):** this was written as if `--max-tokens` were the
+  remaining *generation* lever. It is not — it is an **input prompt cap**. Generation was
+  unmeasured because **no generation code existed** in the project, not because a knob was
+  unturned. It is now measured: **3.67 tok/s cold at 212.6 MB/token under a binding 8 GiB
+  cap, 10.68 warm** (`scripts/probes/probe_decode.py`).
+- **Committed on the branch only — not pushed.**
+
+## Session Handoff — 2026-09-22 (b) — publishing the repo: setup.md, patch, prior art
+
+### Goal
+
+Publish all of it — a `setup.md` an agent can follow, the scripts, and every research file —
+to `https://github.com/leo-kreisman/Qwen3.6-35B-A3B-JEV`.
+
+### Failed Paths
+
+1. **`gh` is not installed**, so there was no CLI to create or inspect the repo.
+   Not a blocker in the end: the repo already existed and was **empty**, and
+   `git-credential-manager` is configured globally (ten repos already push to
+   `leo-kreisman`), so plain `git push` was the whole answer.
+2. **My first reachability check lied to me.** `git ls-remote … | head -5; echo $?` reports
+   *head's* exit status, which is always 0, so the empty output was ambiguous between "empty
+   repo" and "error swallowed". Re-run **without the pipe**: exit 0, no stdout, no stderr —
+   that is the signature of an existing empty repo. Check the thing, not the pipe.
+3. **`results/decisions.one.jsonl` is not a result.** Its keys are
+   `id/options/question/state` — it is the one-criterion *input* fixture, and it had been filed
+   with the outputs. Moved to `examples/` after checking every file's keys rather than its name.
+4. **Vendoring `semif/` was the obvious move and the wrong one** — see below.
+5. **Git identity is configured nowhere** (`git config --list --show-origin` → no
+   `user.name`/`user.email`), so the first commit would have failed outright. Took the identity
+   from `MiniCPM5-2B`'s *local* config rather than inventing one.
+
+### Final Solution
+
+**SemIf is published as a patch, not a fork.** `semif/` is a clone of `TheoLeeCJ/SemIf`
+(MIT, Copyright (c) 2026 TheoLeeCJ) with three files modified. Committing it would have meant
+either carrying a foreign history into this repo or silently forking someone else's project.
+`patch/` instead holds a **754-line diff against pinned commit `1f2dea3`**, the three complete
+post-patch files for drop-in use, and `apply.sh`. The diff's exactness was verified by
+`git apply --check -R` against the working tree — it reverse-applies, so it describes the tree
+precisely, and the working tree was left untouched (`git reset` after `git add -N`).
+
+- **The 12 surveyed engines and `edge0/` are not vendored** (474 MB of other people's code).
+  `scripts/fetch_prior_art.sh` re-clones each at the pinned commit that was actually read, so
+  every claim in the survey stays checkable without redistributing anything.
+- **19 probes rescued from `/tmp`** into `scripts/probes/`, with a README mapping each probe to
+  the question it answers. They were a `/tmp` cleanup away from being lost, and they are the
+  evidence — four of the findings in §6c exist *because* a probe was written to disprove a
+  hypothesis already written down.
+- **The runner was generalized.** It had `/home/scribe/...` hardcoded in six places, so it would
+  not have run for anyone else. Now env-overridable with repo-relative defaults. Every hard-won
+  comment was kept; they carry more than the code does.
+- **The framing was corrected in the deliverable, not just in conversation.** README.md and
+  SETUP.md both state up front that **nothing is generated** — 23/27/28 tok/s is *prompt-prefill*
+  throughput for a classifier, against 15.1 one-shot / 23.0 resident end-to-end including the
+  load. A repo whose headline could be read as "27 tokens/s of output from SSD" would mislead
+  every reader who acted on it.
+- **`probability_status` is surfaced to the agent author.** The field literally reads
+  "uncalibrated as decision confidence"; SETUP.md quotes it and says to rank on it, not threshold
+  it. `full_vocab_argmax_id` is documented as the cheap sanity check that the model's preferred
+  token was one of the offered options.
+- **Published:** 48 files, 310 KB, commit `b25fd22` — no `semif/`, `edge0/`, `offload_projects/`,
+  `.venv`, weights, or `INVALID-*.jsonl`. Secret-scanned first (clean).
+
+### Unresolved
+
+- **Read amplification** — 41 GB against an 18.33 GB expert set. Needs the weight-access rewrite
+  (`pread` over exact expert extents, engine-owned bounded slot pool), which is the seam every
+  working prior-art engine uses.
+- **No resident scorer.** The one-shot CLI re-pays a 19.8 s load every call — 33% of wall clock —
+  and nothing carries over between calls (calls 2 and 3 read the same 61.6 GB). A resident
+  process saved 33.8% per call over three calls. This is the largest unattacked win, and it is
+  still only sketched by `scripts/probes/probe_lifecycle.py`.
+- **`--max-tokens` is still unmeasured.** It is now the last unmeasured lever.
+- **The repo is published but the push has not been independently re-verified** — the check was
+  blocked by a transient classifier denial, so the evidence is the push's own output
+  (`* [new branch] main -> main`, exit 0). Re-confirm with `git ls-remote origin` next session.
+
+## Session Handoff — 2026-09-22 — deployment-shaped tests: lifecycle, contention, budget, scaling
+
+### Goal
+
+The scorer is meant to be **invoked by a code agent** (OhMyPi, OpenCode, …) on a
+**workstation with other work on it**. Every prior measurement was a single run on an idle
+box with a synthetic cap. Re-test in the deployment's shape, in the order: lifecycle →
+contention → memory budget → criteria scaling → variance.
+
+### Failed Paths
+
+1. **Nothing failed here, but the shape of the tests mattered.** Evicting the page cache
+   between agent calls would have overstated the one-shot cost: a real second call inherits
+   whatever the first process left cached. Evicted once at the start of each variant only.
+2. **First N=16 run errored and my grep hid it** (`2>/dev/null` on the probe). The failure was
+   real and became the most important finding of the session — see below.
+3. **My prediction that 8 criteria would be free was wrong.** I expected one 8-branch group to
+   cost the same as one 4-branch group. It cost 64 GB against 41 GB.
+4. **The 12 GiB cap result was not reproducible** (49.98 s, then 34.91 s on identical reads), so
+   the "more RAM is worse" inversion I first wrote up is not a stable property — 12 GiB is
+   simply erratic. Corrected rather than published.
+
+### Final Solution — one real bug fixed, four measured answers
+
+**Bug: `score_shared` cleared the context once, before the group loop.** Every branch carries
+the whole prompt as its own sequence, so positions restart at 0 for each group; a group that
+does not release the previous group's cells reuses sequence ids whose KV still holds a longer
+prompt, and `llama_decode` fails outright. **Measured: 16 criteria against `n_seq_max=8` raised
+`llama_decode failed` from group 2 onward** — a hard failure, not a slow answer. Fixed by
+clearing per group; 16 criteria now return 16 correct answers with identical probabilities.
+Regression test added. Only reachable beyond `n_seq_max` criteria, which is exactly what an
+agent sending a batch will do.
+
+**1. Lifecycle — `cli.py` is one-shot, and nothing carries over.** 3 calls each of
+`load → score → exit`, vs one resident process (`/tmp/probe_lifecycle.py`):
+
+| | 3 one-shot calls | resident (1 load + 3 calls) |
+|---|---|---|
+| wall | 58.2 / 61.2 / 60.6 = **180.0 s** | 19.8 + 40.3 / 39.5 / 39.4 = **139.0 s** |
+| bytes | 61.9 / 61.6 / 61.7 = **185.2 GB** | **144.1 GB** |
+
+Calls 2 and 3 read the *same* 61.6 GB as call 1 — with 41 GB per call against an 8 GiB cap,
+the cache retains nothing between invocations. Residency saves **22.8% over 3 calls** and
+**33.8% per call** once loaded (60.0 → 39.7 s); the saving grows with call count (at 10 calls,
+600 vs 417 s). End-to-end per call the load is 33% of wall clock. **This is an architecture
+decision — a resident scorer — not a tuning knob, and it is the largest unattacked cost.**
+
+**2. Contention — the thread default holds, and is worth *more* under load.** Decode seconds,
+cache evicted, 8 GiB cap, background busy loops representing other workstation work:
+
+| scorer threads | idle | +6 busy | +12 busy |
+|---|---|---|---|
+| 16 (new default) | 38.4 | 55.75 | **74.17** |
+| 6 (old default) | 54.62 | 83.54 | **155.34** |
+
+Under 12 competing threads 16 beats 6 by **2.1×** (idle: 1.4×) — the gap *widens*, and the old
+default degrades worse (2.8× vs 1.9×). Read volume stays ~41 GB throughout, so contention costs
+time, not bytes. Realistic agent-facing figure on a busy box: **~74 s per call, not 38 s.**
+
+**3. Memory budget — the cap is not a handicap, and near the fit boundary it is erratic.**
+
+| cap | decode reads | decode | note |
+|---|---|---|---|
+| 8 GiB | 41.0 GB | 38.4–40.3 s | stable (±2.5%, 4 samples) |
+| 12 GiB | 30.2 / 30.5 GB | 49.98 / **34.91** s | **unstable (±18%)** |
+| 16 GiB | 19.28 GB | 29.31 s | |
+| 24 GiB | 0.00 GB | 16.02 s | fully cached |
+
+Reads fall monotonically with the cap, but time does not, and the 24 GiB point cross-checks the
+warm floor exactly (16.02 s against the 16–18.5 s warm measurements). 12 GiB straddles the
+fit boundary and goes **bimodal** — do not size the budget there; take a clear margin on one side.
+
+**4. Criteria scaling — cost grows faster than the criterion count.**
+
+| N | passes | tokens | reads | time | s/criterion | tok/s |
+|---|---|---|---|---|---|---|
+| 4 | 1 | 908 | 41.0 GB | 39.4 s | 9.85 | 23.0 |
+| 8 | 1 | 1816 | 64.1 GB | 66.7 s | 8.34 | 27.2 |
+| 16 | 2 | 3632 | 128.3 GB | 127.1 s | 7.94 | 28.6 |
+
+Batching pays a little (9.85 → 7.94 s/criterion) but nowhere near free: one pass over 8 branches
+reads 64 GB against 41 GB for 4, because reads grow with tokens-per-pass. Beyond `n_seq_max=8`
+each extra group is a **full additional pass**.
+
+### Unresolved
+
+- **The read amplification now grows with tokens-per-pass** (2.3× the 18.33 GB expert set at
+  1,816 tokens/908 tokens, 3.5× at 1,816). Not a second ubatch sweep, not fixable by prewarming.
+  Still points at the pread-over-exact-extents rewrite.
+- **No resident scorer exists.** Largest known win, needs building.
+- Variance at the operating point (8 GiB) is ±2.5% over 4 samples — enough for a timeout, but
+  p95 across many invocations is not yet characterised.
+- `--max-tokens` remains unmeasured.
+
+### Artifacts
+
+`/tmp/probe_lifecycle.py` (resident: load once, N calls), `/tmp/oneshot_wrapper.py` (true
+one-shot path incl. `/proc/self/io`, via runpy), `/tmp/run_lifecycle.sh`,
+`/tmp/run_contention.sh` (CAP/THREADS/LOAD matrix), `/tmp/run_n.sh`, `/tmp/decisions.n8.jsonl`,
+`/tmp/decisions.n16.jsonl`. Docs: `SEMIF_LLAMACPP_SSD.md` §6d.
+
+
+## Session Handoff — 2026-09-21 (c) — "do the fastest one": thread oversubscription
+
+### Goal
+
+"Do the fastest one" — implement the biggest-win optimisation from
+`OFFLOAD_PROJECTS_ANALYSIS.md`'s ranked list. The list's #1 cheap item was storage placement
+("move the GGUF to the internal NVMe, documented 2.7×").
+
+### Failed Paths
+
+1. **Storage placement — void before it was read.** The device inventory refuted the premise
+   the recommendation rested on: the GGUF is *already* on `/dev/nvme0n1p5` (Kingston
+   SFYRD4000G, `rotational=0`, ext4 `noatime`), and `dd iflag=direct bs=1M` reads it at
+   **2.4 GB/s**. Scoring achieves ~750 MB/s ≈ **31% of the device**, so the gap is access
+   pattern, not placement. Lever already taken.
+2. **`POSIX_FADV_WILLNEED` prewarmer — no effect at all.** A layer-ordered thread issuing
+   WILLNEED over the 40 layers' expert extents (parsed from the GGUF tensor table, 18.33 GB
+   of routed experts) moved read_bytes by **0.14 GB across a whole run** (42.07 vs 41.93 GB)
+   and time by 0.05 s. Not "prefetch is futile" — the *advice was never acted on*: the kernel
+   caps an advised readahead window to a small multiple of `read_ahead_kb` (128 KB here), so
+   16 MB chunks became ~128 KB requests.
+3. **Real `preadv` prewarmer — actively worse.** Replacing the advice with a genuine
+   `preadv` into a reused 16 MB buffer did read all 18.3 GB, and the run got worse:
+   read 42.0 → **56.1 GB**, time 56.0 → **57.56 s**. The prewarmed pages are clean and
+   unreferenced, so under the 8 GiB cap they are the *first* reclaim victims — evicted before
+   the decoder arrives, then faulted in a second time. We paid for those bytes twice.
+4. **"Two expert sweeps" theory — refuted.** 8 branches × 908 tokens = 7,264 would exceed
+   `n_ubatch` 4096 and cause two full layer sweeps. But this sample's group is 4 branches /
+   **908 tokens**, already inside one 4096 ubatch (sweeps = 1). `SEMIF_LLAMA_UBATCH=8192`
+   changed nothing (41.93 GB / 54.62 s).
+5. **My own test expectation was wrong again**, not the code: `_default_threads()` with
+   `cpu_count() is None` returns 5 (fallback 4 cores, then the 4/3 rule), not 4.
+
+### Final Solution
+
+**CPU thread oversubscription.** The runner pinned `THREADS=6` on a 6-core/12-thread host —
+half the machine — and `load_model` defaulted to `os.cpu_count()`, exactly the hardware
+thread count. Both wrong for a decode served from disk: **a thread waiting on an expert page
+fault is not runnable**, so an expert-streaming decode wants more runnable threads than the
+CPU has, to keep the device queue fed. Swept over one fixed pass (cache evicted, 8 GiB cap):
+
+| threads | decode | throughput |
+|---|---|---|
+| 6 (pinned default) | 54.62 s | 768 MB/s |
+| 8 | 50.35 s | 836 MB/s |
+| 12 (hardware threads) | 47.87 s | 860 MB/s |
+| **16 (4/3 × 12)** | **38.44 s** | **1069 MB/s** |
+| 20 | 38.42 s | 1054 MB/s |
+
+Knee at 16, then flat; read volume unchanged (41.2–42.1 GB), so this buys wall clock without
+touching I/O — and it is the evidence that the decode is **not** purely I/O-bound, contrary
+to the earlier conclusion. Result: **−29.6%, lossless, identical probabilities**.
+
+Changes: `_default_threads()` added to `llamacpp_backend.py` (4/3 of `os.cpu_count()`, floor
+4) and used in `load_model`; `run_semif_35b_ssd.sh` computes `$(nproc)*4/3` instead of
+pinning 6; 6 parametrised cases added to `tests/test_llamacpp_batched.py`.
+
+`pytest -q` → **89 passed, 3 skipped**. End-to-end through the shipped runner: metadata
+records `threads 16`, probabilities 0.999986 / 0.999954 / 0.999996 / 0.999988 — identical to
+the controlled probe runs.
+
+### Unresolved
+
+- **The ~2× read amplification stands unexplained.** ~41 GB decode for 18.33 GB of routed
+  experts in a 20.89 GB file, ~1,069 MB/s against a device that does 2.4 GB/s. Not a second
+  ubatch sweep, not fixable by prewarming, and `MADV_RANDOM` (which cuts reads to 26.0 GB)
+  costs 6.6× in time. The remaining explanation is read-ahead re-reads under cap pressure.
+- **The real lever is still the weight-access rewrite** — `pread` over exact expert extents
+  with the engine owning a bounded slot pool (the slot-remap seam, `OFFLOAD_PROJECTS_ANALYSIS.md`
+  §5 #2/#3). Two independent implementations exist; `slipstream-schero94` ships it as a
+  4,488-line patch against pinned llama.cpp `79bba02a6741`. Not a knob.
+- **Warm is still 2× slower than the single-sequence path** (§6b) — batching pays only in the
+  I/O-bound regime.
+- `--max-tokens` remains unmeasured; threads are now settled.
+
+### New — probes and docs
+
+`/tmp/probe_prefetch.py` (layer-ordered prewarmer, `advise` and `read` modes; GGUF tensor-table
+parser for expert extents), `/tmp/probe_ubatch.py` (sweep-count attribution, `SEMIF_THREADS`),
+`/tmp/run_prefetch.sh`, `/tmp/run_ubatch.sh`. Docs: `SEMIF_LLAMACPP_SSD.md` §6c (new),
+`OFFLOAD_PROJECTS_ANALYSIS.md` (§4 dead end added, #7 retracted, #8 added).
+
+
+## Session Handoff — 2026-09-21 (b) — optimising the scoring path
+
+### Goal
+
+"revisit and optmise, it should be doing at least the same" — the first SSD measurement
+(72.79 s, 112.8 GB for 4 decisions) looked implausibly slow next to Edge0's streamed
+13 tok/s, so the scoring path had to be made at least as fast.
+
+### Failed Paths
+
+1. **"Raise `n_seq_max` and batch the branches" — necessary but not sufficient.** It was
+   the right diagnosis (a single-sequence context serialised the branches) and the wrong
+   fix on its own: reads went 112.8 → **108.1 GB** and the run got *slower* (77.2 s). The
+   log line `graph_reserve: ... ubatch with n_tokens = 512` was the clue — llama.cpp's
+   default `n_ubatch` split the 908-token group into two physical ubatches, and each ubatch
+   walks all layers and re-reads their experts, so "one pass" was two sweeps underneath.
+   Fixed by sizing `n_batch = n_ubatch` to the whole group.
+2. **`llama_memory_seq_cp` to share one prefilled prefix — SIGABRT.** The cheaper design was
+   to prefill the 135-token state once and copy its KV into each branch. This checkpoint is
+   a *hybrid*: `qwen35moe` interleaves recurrent (linear-attention) layers with attention
+   layers, and `llama_memory_hybrid::seq_cp` aborts inside `llama_kv_cache::seq_cp`. So each
+   branch must carry the whole prompt itself, which is exactly why the batched path is
+   *slower* warm (18.53 s vs 9.29 s) than the sequential one.
+3. **Assuming the load was cheap because `load_mode = mmap`.** It is not: isolated with no
+   SHA-256 pre-pass and no tokenizer, `llama_model_load_from_file` reads **20.9 GB (18.3 s)**
+   — the entire file. `check_tensors` is `false`, so this is not a validation read; it is
+   this llama.cpp's mmap path touching the whole mapping, and no `llama_model_params` field
+   turns it off.
+
+### Final Solution
+
+Three changes in `semif/src/semif_phase1/llamacpp_backend.py`, plus a new test file:
+
+1. **Multi-sequence batched scoring.** `_Engine` takes `sequences` (`SEMIF_LLAMA_SEQ_MAX`,
+   default 8) and sets `n_seq_max` / `n_outputs_max`. New `branch_logits_batched(prefix,
+   suffixes)` puts every branch — each carrying the *whole* prompt as its own sequence —
+   into a single `llama_decode`, flagging only each branch's last token and reading logits
+   back per batch slot. `score_shared` uses it and loses the per-branch save/restore loop
+   entirely.
+2. **`n_batch = n_ubatch` sized to the group** (`_ubatch()`, default `sequences × 512`).
+   This is the change that actually cut reads; `SEMIF_LLAMA_UBATCH` / `..._PER_SEQ` pin it.
+3. **Cached GGUF digest** (`_gguf_digest()`): the SHA-256 pass reads the whole 20.9 GB file,
+   and llama.cpp's loader then reads it again, so a cold run paid two full sweeps before
+   scoring a token. Now cached in a `<name>.sha256.json` sidecar keyed on size + `mtime_ns`;
+   `SEMIF_GGUF_DIGEST=compute|skip` overrides, and every row records which path was taken in
+   `model.gguf.digest_source`.
+
+### Result — same eviction, same 8 GiB cap, same input
+
+| | before | after |
+|---|---|---|
+| `total_seconds` (scoring) | 72.79 s | **56.57 s** |
+| bytes read, whole run | 112.8 GB | **60.2 GB** |
+| prompt throughput | 6.9 tok/s | **16.1 tok/s** |
+| decisions | 4/4 | **4/4, identical probabilities** |
+
+**Warm is the trade-off and it went the other way: 9.29 s → 18.53 s**, because each branch
+recomputes the shared prefix (908 token-forwards vs 503). Batching is correct for the
+regime this work targets and wrong for a host where the checkpoint fits in RAM.
+
+Verified: `pytest tests/` → **79 passed, 3 skipped**, including a new
+`tests/test_llamacpp_batched.py` covering the batched slot mapping, multi-ubatch flagging,
+the batch-sizing rules, and digest-cache reuse/invalidation.
+
+### Unresolved
+
+- **The ≈2× read amplification on the decode pass.** One 908-token ubatch reads 42.0 GB
+  against a ~19.5 GB logical expert footprint — consistent with mmap fault-around
+  read-ahead pulling unused pages. `posix_fadvise(POSIX_FADV_RANDOM)` / `madvise(MADV_RANDOM)`
+  would suppress it, but both must be applied to llama.cpp's own descriptor or mapping,
+  which this backend does not own. Worth ≈25 s if it holds, and it is the largest single
+  remaining term.
+- **The load's 20.9 GB is unattacked** and is now roughly a third of the run.
+- **The warm regression is unmitigated** — no fallback path is wired, deliberately, to keep
+  one hot path rather than two. Revisit if a RAM-resident deployment matters.
+- **`--max-tokens` and `--llama-threads` remain unmeasured**, and prefill still scales with
+  tokens × experts touched, so a real DOM snapshot is far worse than the 135-token case.
+
+### New — parallel project analysis (complete)
+
+Cloned all 12 repos from `qwen3.6-35b-a3b-ssd-offload.md` into `offload_projects/`
+(11 certified + `flash-moe` for its `paper/` and `repack_experts.py`), ran five agents
+(Edge0; the C/portable cluster; the Apple cluster; the remainder; a web-research pass on
+published algorithms), and wrote the synthesis to **`OFFLOAD_PROJECTS_ANALYSIS.md`**.
+The two `slipstream` repos collided on clone; the second is `slipstream-schero94`.
+
+Headline findings:
+
+- **The list overcounts implementations.** `slipstream-dwijenpatel` is a fork of
+  TurboFieldfare and `Mference` carries the same files almost verbatim — three of the four
+  Apple repos are one codebase. Certification at README level also did not survive: Edge0's
+  prerouter accuracy is **never measured in-repo**, its "Recover-LoRA" reduces quality loss
+  and **zero I/O**, `samosa-chat`'s "2-bit" is two 4-bit planes, and
+  `Qwen-MoE-Router-exp` is a stub with no disk code.
+- **Every working engine uses `pread` over a per-expert offset table.** The mmap-based ones
+  are the slow or broken ones. Convergent extras: coalesce each expert into one contiguous
+  16 KiB-aligned slab, bound the cache with a hard RAM admission gate, and floor it at
+  8 slots/layer (top-8 routing means a layer below 8 slots misses *every* token).
+- **The proven way to stream experts inside llama.cpp** is a slot-remap seam implemented
+  independently by `siphon.cpp` (repoint `w->data`, shrink `w->ne[2]`, rewrite the id tensor)
+  and `slipstream-schero94` (a 4,488-line patch against pinned commit `79bba02a6741`).
+  The latter is the closest thing to a drop-in and the most directly applicable artifact found.
+
+**A measured correction to our own doc.** The web pass ranked "kill mmap fault-around
+read-ahead" first (+53% claimed, llama.cpp #23324). We tested the cheap version —
+`madvise(MADV_RANDOM)` on the GGUF VMA via `/proc/self/maps` — and it is a trap: reads fell
+42.0 → **26.0 GB** while the run went 56.0 → **368.0 s (6.6× slower)**, effective throughput
+750 → 71 MB/s. Disabling read-ahead turns scattered expert faults into synchronous random
+reads and NAND *latency* takes over. **The 2.15× overhead is load-bearing prefetch, not
+waste**; `SEMIF_LLAMACPP_SSD.md` §6b has been corrected to say so. #23324 measured an async
+`pread` pool over exact expert extents with pipelining, which is a different change.
+
+Also recorded as dead ends with reasons: lossless compression of quantized weights
+(incompressible, decoder 114–120 MB/s vs our 750 MB/s SSD), elaborate eviction policies
+(arXiv:2608.07911: causal rules recover none of the offline-optimal gap), and co-activation
+expert reordering (`flash-moe` measured 0% — NVMe ignores scatter at 7 MB granularity).
+
+
+## Session Handoff — 2026-09-21
+
+### Goal
+
+Run **Qwen3.6-35B-A3B** as the JEV-style typed-decision scorer, with expert weights
+served from **SSD** rather than resident RAM, on an **M3** but without depending on
+Apple Silicon — the user prefers the llama.cpp substrate over MLX.
+
+### Failed Paths
+
+1. **Path A — "point SemIf's llama.cpp backend at a 35B GGUF with MoE-offload flags."**
+   Half right, but premised on a wrong assumption. The `-ot ".ffn_.*_exps.=CPU"` /
+   `--cpu-moe` / `--n-cpu-moe N` family are *partitioning* flags: they keep experts on
+   CPU while other layers go to the GPU. SemIf already sets `n_gpu_layers = 0`, so every
+   layer is on CPU and there is nothing left to partition. No flag to pass, and no
+   flag-passthrough patch needed. **The entire "Path A needs a passthrough patch"
+   premise was wrong.**
+
+2. **Path B — "add Edge0 as a SemIf backend / peer module."** Dropped. Edge0's only
+   backend is `src/edge0/backends/mlx`, which is exactly the Apple lock-in the user
+   asked to avoid. Its value is as a reference implementation, not a dependency.
+
+3. **Laya weight-conversion route.** Earlier established as impossible: Laya is
+   encoder + decision Transformer + scoring head + action head, non-autoregressive,
+   421M, 512–1024 ctx. A 35B causal MoE cannot be converted into a Laya checkpoint.
+   Only its *I/O contract* is convertible. Moot now — the llama.cpp path supersedes it.
+
+4. **`--n-cpu-moe 0`** in a pasted transcript was backwards (zero expert layers on CPU =
+   all experts to GPU = OOM). Correct is `--n-cpu-moe 99` / `--cpu-moe`. Now moot.
+
+5. **README-level "certification"** of 11 SSD-offload repos was weaker evidence than the
+   conclusions drawn from it. Disclosed in `qwen3.6-35b-a3b-ssd-offload.md`. Superseded
+   by reading actual source here.
+
+### Final Solution
+
+**A small patch to SemIf's existing llama.cpp backend** — `src/semif_phase1/llamacpp_backend.py`:
+
+- `load_mode` is set **explicitly** (default `mmap`) with a `SEMIF_LLAMA_LOAD_MODE`
+  override accepting `auto|none|mmap|mlock|mmap_mlock|direct_io`; an unknown value
+  raises rather than silently falling back.
+- `use_extra_bufts` is set to **`false`**, with a `SEMIF_LLAMA_EXTRA_BUFT` override. This
+  is the load-time repack switch, and the difference between a >RAM checkpoint loading
+  and being OOM-killed during load.
+- Both recorded in the result metadata (`load_mode`, `load_mode_name`,
+  `use_extra_bufts`) so every output row is self-describing about how its weights were
+  served.
+- Docstring states the streaming contract, including why `use_mmap` / `use_mlock` are
+  **not** the controls here.
+
+`mmap` keeps the GGUF file-backed and demand-paged, so a routed expert is read from disk
+on first touch and its page stays evictable — which is what lets a 19.5 GiB checkpoint
+score on a small machine. `LLAMA_LOAD_MODE_MLOCK` would pin every expert in RAM and the
+load would simply fail.
+
+**Correction — the first version of this patch was a silent no-op.** It set
+`params.use_mmap` / `params.use_mlock`. Those fields were **removed** from
+`llama_model_params` in this llama.cpp; the struct carries `load_mode` instead. A ctypes
+`Structure` accepts arbitrary Python attributes, so the assignment *succeeded* and
+`bool(params.use_mmap)` read back as `True` — the patch changed nothing, and the
+metadata it wrote was self-confirming. Streaming was already on by default anyway
+(`load_mode = AUTO` → `mmap`, `llama-model-loader.cpp:554`), which is exactly why a
+big-RAM host could not tell a working patch from a no-op one.
+
+**Correction — the repack diagnosis.** `GGML_CPU_REPACK=0` was tested and **disproven**
+(117 repack lines persisted); `CPU_REPACK` is the buffer type's *name*, not an env key.
+Reading `use_extra_bufts` off a Python-built `llama_model_params()` also misled: that
+struct is zero-initialised by the binding and reported `false`, when the real default is
+`true` (`llama-model.cpp:2489`). The actual gate is `use_extra_bufts` in
+`make_cpu_buft_list` (`llama-model.cpp:942`), reached by
+`ggml_backend_cpu_repack_buffer_type()` (`ggml-cpu.cpp:65`) — and it is confirmed by
+measurement, below.
+
+Verified against disk:
+
+| Prerequisite | Finding |
+|---|---|
+| Target GGUF | already local — `Qwen3.6-35B-A3B-UD-Q4_K_S.gguf`, 19,926 MB |
+| GGUF identity | `general.architecture=qwen35moe`, `general.name=Qwen3.6-35B-A3B`, `model_type=qwen3_5_moe` — confirmed correct model |
+| Tokenizer | not cached; fetched `Qwen/Qwen3.6-35B-A3B` (`vocab.json` + `merges.txt`; this repo has **no** `tokenizer.json`) |
+| `llama-cpp-python==0.3.35` | **sdist only, zero wheels on PyPI** — source build (cmake + compiler) is unavoidable |
+| 0.2.39 in `~/.local` | uses the **old C API** (`llama_load_model_from_file`, no `llama_get_memory`) — cannot run this backend |
+| SemIf install | absent; fresh clone, venv created at `semif/.venv` |
+
+**Verified by execution, not by reading:**
+
+- `pytest tests/test_llamacpp.py` → **19 passed, 1 skipped**. The streaming test asserts
+  `load_mode` and `use_extra_bufts`, and additionally asserts the returned params have
+  **no** `use_mmap` / `use_mlock` attribute — so a regression back to the inert spelling
+  fails loudly instead of silently doing nothing.
+- **Repack is gated by `use_extra_bufts`, measured on the real checkpoint** — two loads,
+  counting `repack` lines: `false` → **0 lines**, `true` (the default) → **119 lines**.
+  Both loaded. This is the fix for the OOM kill, and the run script now pins it to `0`.
+- The 19.5 GiB checkpoint **loads and reports `load_mode = mmap`** with all 40 layers
+  `assigned to device CPU`, `n_expert = 256`, `n_expert_used = 8`, `file type = Q4_K - Small`.
+- **Warm-cache baseline (NOT an SSD number)**: 4/4 decisions correct, 11.88 s for all four
+  criteria at `threads=6`, `max-tokens=8192`, `batch_size=4` — prefill 3.61 s,
+  suffix_forward 8.24 s (≈2.1 s marginal per extra criterion). `suffix_forward` exceeding
+  `prefill` is the expert-read term, i.e. the one that changes on the SSD path.
+- **`--mode shared` requires all rows to carry one identical nonempty `state`** and refuses
+  otherwise (`ValueError: Shared scoring requires one nonempty exact state`). This is the
+  JEV contract made explicit — one page snapshot, many criteria — and it is why the first
+  sample input (heterogeneous states) failed. `decisions.sample.jsonl` now models the
+  shared-state shape; `MODE=direct` is the escape hatch for differing states.
+
+Note the llama.cpp path never inspects `model_type` — it needs only the HF **tokenizer**,
+re-tokenizes through the GGUF vocabulary and refuses to score if the two disagree
+(`_verify_vocabulary`). That is why a `qwen3_5_moe` GGUF works even though `core.py`
+recognises only `qwen3_5` / `qwen3_5_text` for the torch backend.
+
+Artifacts: `SEMIF_LLAMACPP_SSD.md` (full rationale), `run_semif_35b_ssd.sh`,
+`decisions.sample.jsonl`.
+
+Result files, named so the valid ones cannot be confused with the invalid ones:
+
+| file | what it is |
+|---|---|
+| `decisions.ssd8g_evicted.jsonl` | **the real SSD measurement** — evicted cache, cap bound |
+| `decisions.scriptcheck.jsonl` | independent reproduction via the run script |
+| `decisions.warm_evicted.jsonl` | warm control, cache evicted, no cap |
+| `decisions.warm_noRepack.jsonl` | warm, repack off (the 9.29 s figure) |
+| `INVALID-warmcache.ssd8g*.jsonl` | capped runs taken **before** eviction was added — cap never bound; kept only as evidence of the failed method, **not** valid SSD numbers |
+
+### Unresolved
+
+- **The SSD number exists — and the first attempt at it was invalid.** The `--simulate-8g`
+  run (cgroup `MemoryMax=8G`, `MemorySwapMax=0`) completed after the repack fix and gave
+  4/4 decisions in 9.35 s — but it measured **nothing**, because a cgroup does not
+  re-charge an already-cached page. Measured: `read_bytes = 0` for the whole run, scope
+  `memory.peak = 632 MB`, `memory.events max = 0` — the 8 G limit never bound. The
+  19.5 GiB GGUF was fully resident (`fincore`: 19.5 G) and charged to the long-lived
+  terminal scope (40 GB peak), so the fresh scope reused it free. A capped run can come
+  out *faster* than an uncapped one, which is the tell.
+  **Fix:** evict first with unprivileged `posix_fadvise(POSIX_FADV_DONTNEED)` (`fincore`
+  19.5 G → 0 pages, no root needed; this box has no passwordless sudo).
+  `run_semif_35b_ssd.sh` does this under `--simulate-8g` and prints the `fincore` line so
+  cache state is visible rather than assumed. **The check to trust is
+  `/proc/<pid>/io read_bytes`, not wall-clock.**
+  **Second bug, caught by the end-to-end re-check:** the eviction step was gated on
+  `$SIMULATE`, but the re-exec passed `"$0"` with **no arguments**, so the child never
+  saw `--simulate-8g`, `SIMULATE` was empty, and the run silently took the warm path
+  (`fincore` 19.5 G, `total_seconds` 9.17 s). The flag applied the cgroup cap — that came
+  from `systemd-run` directly — while skipping everything else gated on it. Now gated on
+  an exported `SEMIF_CAPPED` and `"$@"` is forwarded. Lesson recorded: verify a
+  measurement harness by checking it *fails* when it should, not only that it runs.
+
+**The SSD measurement (evicted + capped at 8 GiB, repack off, `threads=6`, 4 criteria):**
+
+| | warm (no cap) | capped 8 GiB | ratio |
+|---|---|---|---|
+| `total_seconds` | 9.29 s | **72.79 s** | 7.8× |
+| `prefill_seconds` (135-token state) | 2.45 s | **16.03 s** | 6.5× |
+| `suffix_forward_seconds` (368 tok) | 6.82 s | **56.74 s** | 8.3× |
+| marginal per extra criterion | ≈1.7 s | **≈14.2 s** | 8.3× |
+| decisions correct | 4 / 4 | **4 / 4** | — |
+| **bytes read from storage** | 20.9 GB | **112.8 GB** | 5.4× |
+| cgroup `memory.peak` | 40.3 GB (uncapped) | **exactly 8 GiB** | — |
+| cgroup `memory.events max` | 0 | **70,584** | — |
+
+The cap genuinely bound (8 GiB peak, 70,584 limit hits), so this is a real streaming
+measurement: **one shared-state run of 4 decisions read 112.8 GB from SSD — 5.8× the
+checkpoint size.** Subtracting the ~20.9 GB any cold run pays once (SHA-256 + first
+touch), ~92 GB is re-reading evicted expert pages. Answers were unchanged (4/4, same
+probabilities), so streaming costs time, not correctness. Storage throughput during the
+read phase was ~800 MB/s.
+
+**Reproduced independently** through `./run_semif_35b_ssd.sh --simulate-8g` rather than
+the ad-hoc harness: **79.28 s** total, prefill 17.77 s, suffix 61.48 s, identical 4/4
+answers. Quote the budget as **≈73–79 s for 4 decisions on a 135-token state, ≈14–15 s
+marginal per criterion**; the spread is run-to-run variance, not a different regime.
+
+**Also measured: repack-off is not a speed cost here.** Warm + repack-off is **9.29 s**
+vs **11.88 s** warm + repack-on — ~22% *faster*, and reproduced twice (9.35 s, 9.29 s).
+So the setting that makes a >RAM checkpoint loadable is also free on this CPU, contrary
+to the earlier assumption that it trades speed for residency. Caveat: the 11.88 s figure
+came from an earlier session, so re-measure repack-on under current conditions before
+leaning on the 22%.
+
+**Caveat that limits extrapolation:** `prefix_tokens` was only **135** — a small form
+snapshot. Prefill scales with tokens × experts touched, so a real DOM snapshot is the
+expensive case and 16 s is the *cheap* end.
+
+2. **Prefill is the expensive case, not decode.** Decode touches ~8 experts/layer/token
+   (SSD-friendly); prefill over N tokens touches most of 256 experts/layer (SSD-hostile).
+   SemIf reads decision logits from a **prefill**, so a JEV decision sits in the worst
+   case.
+   **Retraction (2026-09-22):** this entry previously added "This also re-reads Edge0's
+   113–140 tok/s cold-prefill claim as arithmetically implausible for a full-model read
+   per pass." **That is wrong and is withdrawn.** 3,300 tokens at 113 tok/s is 29.2 s; a
+   full 20.88 GB read in that window is 0.72 GB/s, roughly **7× under** an M4 Pro's SSD.
+   The figure was never impossible. Edge0's actual mechanism is `staged_k4()`'s four fixed
+   expert slots plus a 33-head prerouter, which engineer away the per-token full routed-set
+   read — the same conclusion as `SEMIF_LLAMACPP_SSD.md` §5. Both numbers are also on a
+   24 GB machine with the checkpoint effectively page-cached, so the like-for-like row is
+   our **warm 10.68 tok/s vs Edge0's 14.9**, not a 3.5× gap.
+
+3. **`--max-tokens` default is 4096** — a hard prompt cap that a DOM snapshot will
+   exceed. Script defaults to 8192; needs real tuning, since raising it grows KV memory
+   and competes with the page cache for exactly the RAM streaming depends on.
+
+4. **`--llama-threads` defaults to every core**; script defaults to 6. Unmeasured.
+
+5. **If the capped run shows mmap thrashing**, the fix is deliberate I/O (`O_DIRECT` /
+   `pread` against an expert offset table) rather than fault-driven paging. Edge0 does
+   this; unmerged llama.cpp PR #25294 does too. That is a *later* step, gated on
+   measurement — do not start it before the `--simulate-8g` number exists.
+   Note `SEMIF_LLAMA_LOAD_MODE=direct_io` is **not** that fix: it opens the GGUF with
+   `O_DIRECT` and reads tensors into allocated buffers (`llama-mmap.cpp:199`), which is a
+   faster *load* and a worse *footprint*. It is exposed for completeness, not recommended.
+
+6. **Source build of `llama-cpp-python` in flight.** venv created with
+   `uv venv --python 3.11`, which resolved to **3.11.0rc1** (the only other local
+   interpreter is stable 3.10.12). If the extension misbehaves, rebuild on 3.10.12.
+# Lossless levers — nothing here changes a decision
+
+Tier definition used throughout: **lossless = the same bytes reach the dequant kernel, so
+logits and decisions are unchanged by construction** (bit-identical, or trivially
+decision-stable because only the *layout* or the *schedule* moves). Anything that changes the
+numerics is marked, and the check it needs is named.
+
+Baseline being moved (all `[verified-here]`, `docs/STATUS-2026-09-22.md`): cold 8 GiB cap
+verified binding, page cache evicted, **3.67 tok/s at 212.6 MB read per generated token**;
+warm/no cap 10.68 tok/s; routed expert set 18.33 GB; raw device ~2.4 GB/s; predicted
+decode ceiling 2.4 GB/s ÷ 566 MB/token ≈ **4.2 tok/s**.
+
+New evidence collected for this tier (this session, `[verified-here]`):
+
+| probe | result | file |
+|---|---|---|
+| per-stream compressibility, byte-weighted over **all 120** expert tensors | payload 96.3% of raw (1.04×), packed6 scales/mins 89.1% (1.12×), **fp16 d/dmin 78.6% (1.27×)**; all streams together **5.11%** of the expert set | `results/q4ks-weighted.json` |
+| metadata-only split | metadata is **11.1%** of the file; compressed to 73.5% ⇒ **2.95%** file reduction if the payload stays raw | `results/q4ks-decomp-speed.json` |
+| decompression speed | zstd-3 whole 846 MB/s 1-thread, **5.28 GB/s at 8-way over 4 MiB frames**; LZ4 4 MiB frames **7.0 GB/s** at 8-way and 92.6% of raw | `results/q4ks-decomp-speed.json` |
+| O_DIRECT random reads on **this GGUF, this NVMe** (unprivileged C harness, 512 MiB budget/run) | 4 KiB qd=128 registered: 1,271 MiB/s vs sync pread 53 MiB/s (**24×**); **589,824 B (=one expert) qd=8 uring 3,384 vs pread 1,658 MiB/s (2.0×)**; 4/7 MiB ~3.3–3.4 GB/s both ways | `results/nvme-io-20260922/io_results.csv` |
+| per-layer spread | payload zstd ratio is **layer-dependent** (1.113 at blk.0 vs 1.030 at blk.18/27/36) — a per-tensor figure, not a file constant | `results/q4ks-layer-spread.log` |
+| `-ncmoe` sweep under the 8 GiB cap | decode **ncmoe=99 → 8.2 tok/s vs ncmoe=32 → 20.4 tok/s (2.5×)**; no cap, ncmoe=99 37.4 / 40 36.3 / 32 40.3 / 24 50.7 tok/s | `results/bench-8g-20260922-035837/` |
+
+---
+
+## A. Bounded tier — same bytes, only the layout or the schedule changes
+
+1. **Read the expert gather with io_uring + `O_DIRECT`, registered buffers, qd 32–128.**
+   Same file, same offsets, same bytes. Measured on this device at the exact extent size a
+   routed expert has (589,824 B): **3,384 vs 1,658 MiB/s, 2.0×**; at 4 KiB it is 1,271 vs 53
+   MiB/s. Kills the need for the 4/3×nproc crutch (that result is the *substitute* for missing
+   queue depth, not a law). **Ceiling: 4.2 tok/s — depth buys latency, not bytes**, so this is
+   worth up to ~1.15× on decode but much more on prefill, which is extent-limited.
+2. **Repack: 16 KiB output-blocked slabs, one expert = one extent, offset table folded into
+   the slab.** Pure byte shuffling; the quant bytes are unchanged. Today a 590 KB–7 MB expert
+   is 144–1700 separate 4 KiB extents. Directly attacks the ~2.2× *gather overfetch*, the
+   factor that is currently inferred from the cap table and needs per-layer read tracing to
+   confirm. Projection: amplification 4.41× → ≤1.2×.
+3. **Pass-pinned working set (`lru_gen_min_ttl` semantics) — do not evict a page the current
+   pass will re-touch.** This is the measured 2.12× *cap-driven* re-read (41.0 GB read for a
+   9.3 GB routed set). No numerics involved. Projection: 10.25 GB → 4.83 GB per decision.
+   Must stay paired with (7), because the re-read is also what makes the prefetch work.
+4. **Stage into engine-owned buffers, never the page cache.** Measured: a `preadv` prewarmer
+   made reads *worse* (42.0 → 56.1 GB) because clean unreferenced pages are reclaim victim #1.
+   Lossless by construction — it changes where bytes land, not which bytes.
+5. **`n_batch = n_ubatch = sequences × 512`.** Measured 67.0 → 42.0 GB, logits bit-identical.
+6. **Thread oversubscription at 4/3 × hardware threads.** Measured 54.6 → 38.4 s, −29.6%,
+   reads unchanged, **identical probabilities**.
+7. **Do not "fix" amplification by suppressing read-ahead.** `MADV_RANDOM` cut reads
+   42.0 → 26.0 GB but cost **56.0 → 368.0 s**. The amplification on a >RAM MoE is load-bearing
+   prefetch. Listed as a lever *against* the tempting lossless-looking one.
+8. **More RAM — the cheapest lossless speedup in the project.** 3.67 tok/s at a verified-binding
+   8 GiB vs **10.68 tok/s** warm with no cap. Raising the cap is a **2.9×** lever and changes
+   nothing numerically; it belongs in the same table as the imports.
+
+## B. Lossless-by-data — fewer bytes on the wire, decoder must stay out of the hot path
+
+9. **Metadata/payload stream separation: byte-plane transpose, compress the fp16 metadata
+   only, keep the 4-bit payload raw.** The self-correction stands: the payload is incompressible
+   (1.04× over all 120 tensors) but **fp16 `d`/`dmin` compresses to 78.6% (1.27×)** and the
+   packed-6 scales/mins to 89.1%. File-level saving is **2.95%** (212.6 → 206.3 MB/token).
+   Cheap to decode: only 11.1% of the bytes are touched. Huffman rather than zstd is the
+   published form (ZipNN/QStore/Huff-LLM target exactly this skewed-exponent stream).
+10. **Whole-file lossless recompression is a smaller lever than it looks, and it is now
+    priced.** Compressing *everything* (payload included) saves **5.11%** of the expert set
+    ⇒ 212.6 → 201.7 MB/token, 3.67 → ~3.87 tok/s (**+5.4%**), at a cost of **0.251 s of
+    single-threaded zstd per token against a 0.272 s/token budget** — i.e. it only pays if the
+    decode is multi-threaded (5.28 GB/s at 8-way over 4 MiB frames → 0.040 s) or LZ4 is used
+    (7.0 GB/s at 8-way, but only 7.4% of raw saved). **This is single-digit percent for a
+    compressor in the hot path; rank it below every structural lever in section A.**
+11. **`-ncmoe N` — put part of the expert set in the two idle RTX 5060 Ti and stop reading it
+    from NVMe.** Measured under the same binding 8 GiB cap: decode **8.2 → 20.4 tok/s at
+    ncmoe=32** (2.5×), and the disk-resident working set shrinks by (40 − N)/40 (N=32 removes
+    ~3.7 GB of expert bytes from the stream). **Flagged, not filed as bit-identical:** the
+    weights are the same but the compute path becomes CUDA kernels, so this needs the same
+    decision-equivalence check the batching patch got (`results/decisions.batched.jsonl`).
+    If a near-tie fixture ever exists, re-verify against it — all four current fixtures sit at
+    p ≈ 0.99998 for the winner, which is a weak test.
+12. **Speculative verification (SpecMoE / MoE-SpeQ) with a resident drafter.** The published
+    mechanism is *distribution-preserving under exact rejection sampling*, so it can belong in
+    this tier — but only in that form and only with a drafter that does **not** read NVMe, since
+    the union of experts for k drafts must cost less than k sequential reads. Measured gate:
+    acceptance ≥ ~1.4 at k=4, else the union costs more than it saves. **Unverified on this
+    checkpoint; listed as a conditional member of the lossless tier, not an accepted one.**
+
+---
+
+## What is *not* in this tier (kept separate on purpose)
+
+Lossy or numerics-changing: smaller quant / bpw reduction, REAP pruning, expert merging,
+batch-aware routing overrides, any router approximation or lookahead that can change a
+top-8 selection. Each must be presented with its own decision-flip rate on the four fixtures
+(`examples/`), measured the way the batching patch was — a lossy lever may never be reported
+with a lossless one.
+
+## Kill gates
+
+- (1) warm-cache regression: io_uring is slower on a warm cache ⇒ keep a buffered fast path.
+- (2)/(3) if bytes read per decision does not fall, the amplification is not layout — then (3)
+  carries everything and (2) is only a latency win.
+- (9)/(10) if decompression CPU cost exceeds the 3–5% byte saving on the same cores that do the
+  MoE math, drop it. The 0.251 s vs 0.272 s numbers above are the reason this gate is explicit.
+- (11) decision-equivalence on all four fixtures, and on a near-tie fixture if one is ever added.
+- (12) acceptance < ~1.4 at k=4, or a drafter that touches NVMe.
+# SSD expert-streaming: source-level teardown of the 12 candidate projects
+
+Scope: every repo in `qwen3.6-35b-a3b-ssd-offload.md` (the 11 "certified" entries plus
+`flash-moe`), cloned into `offload_projects/` and read at **source level**, not README level.
+Plus a web pass over the published algorithms. Written against one concrete problem:
+
+> Qwen3.6-35B-A3B, 40 layers, 256 experts, top-8, 19.5 GiB Q4_K_S, x86 Linux, **8 GiB RAM cap**,
+> via llama.cpp + mmap. Measured: 60.2 GB read and 56.6 s for 4 decisions.
+
+The list's own warning was that "certified" only ever meant "the documentation asserts it."
+That gap was real, and section 1 is what fell out of closing it.
+
+---
+
+## 1. First finding: the list overcounts independent implementations
+
+Three of the four Apple repos are **one codebase**. `slipstream-dwijenpatel` is a fork of
+`TurboFieldfare` (`AGENTS.md:5`), and `Mference` carries the same streaming files almost
+verbatim (`Infrastructure/Streaming/PreadExpertStreamer.swift`, `ExpertStreamer.swift`,
+`ResidentExpertStreamer.swift`). So "Apple Silicon 7" is closer to 4 independent designs:
+TurboFieldfare-lineage (×2), `qwisp`, `qwen-fieldfare`, `q36`, `samosa-chat`, and Edge0.
+
+Second, the certification standard did not survive contact with the source:
+
+| Claim | Source-level reality |
+|---|---|
+| Edge0 "prerouter routing prediction" | Implemented (`prerouter/heads.py`, 33 MLP heads, start_layer 7) — but **prediction accuracy is never measured anywhere in the repo**. No recall counter in `layer.stats()` (`layer.py:923`). The "+59%" is a docstring number with no artifact. |
+| Edge0 "SSD expert offload" | Real, but implemented as **whole-file mmap + `madvise(MADV_WILLNEED)`** (`streaming/mmap.py:27,43-50`). It has a real offset table yet never uses it for a positioned read: per-expert access is a numpy view (`mmap.py:89-93`). I/O parallelism is delegated to the page cache. MLX/Metal-bound. |
+| Edge0 "Recover-LoRA" | Plain unmerged LoRA (`adapters/lora.py:1-10`), base int4 stays byte-identical. **Reduces quality loss, not bytes** — it reads *more*. README branding. |
+| Edge0 measured numbers | `examples/bench.py` reports tok/s and peak GiB only — **no GB-read, no disk throughput, no hit rate**. 14.9–17.7 tok/s is real; the streaming-efficiency claims are not measured in-repo. |
+| `samosa-chat` "2-bit MoE" | Two 4-bit planes joined — `refine_join_projection` rebuilds q4 nibbles from base+residual (`qwen36b.c:1698-1710`); base-only forces low 2 bits to 1, giving codes {−7,−3,1,5} (`:142-147`). Bytes on disk drop; the kernel still eats q4. |
+| `Qwen-MoE-Router-exp` | **Stub.** Zero disk code; a launcher plus cgroup/SIGSTOP governor. Its README self-admits no per-expert eviction. Useful only as the honest negative baseline. |
+| `flash-moe` ordering experiments | Expert *ordering* by co-activation measured **0%** gain — "NVMe ignores scatter at 7 MB granularity". The win is coalescing, not grouping. |
+| `siphon.cpp` 6 GB VRAM | Real mechanism, but the 50+/20 tok/s figures have **no committed logs**, only harnesses. |
+
+Two more negative results worth not repeating: `dwijenpatel`'s routing-prediction prefetch
+cut disk wait 15.95 → 7.01 ms/token yet was **net neutral-to-negative** (6% slower elsewhere,
+`README.md:338-345`); and Mference's own docs report its `mmap` + GPU-fault residency strategy
+paging at **~0.7 GB/s** (`ResidentExpertStreamer.swift:19-21`).
+
+---
+
+## 2. What every working engine actually does
+
+Without exception, the engines that work read experts with **`pread` against a per-expert
+offset table**, and the ones that use whole-file mmap are the slow or broken ones.
+
+| Project | Disk path | Offset table | Cache policy | Prefetch |
+|---|---|---|---|---|
+| **Edge0** | mmap + `MADV_WILLNEED` | safetensors header, per-tensor; expert offset by **integer division** | global cross-layer **LRU**, 64 slots, count-bounded | trained prerouter (33 heads) + previous-token set; lookahead **1 token**; `staged_replace=False` in all presets |
+| **Mference** | `pread` + coalesced **`preadv`** | `layout.json`, page-aligned stride validated at load | **LFU-aging** (halve counts every 32 plans) | speculative reservations on a global queue; 16.4% gain claimed |
+| **slipstream-dwijenpatel** | `pread`, `F_NOCACHE`; no mmap | `layout.json`, `expertStride % pageSize == 0` enforced | **LFU-aging**, 64 slots/layer | RoutePredictionLedger with real `recall(distance:)`; **off by default**, honestly reported neutral |
+| **qwisp** | `pread` **directly on safetensors** — no repack | safetensors header at runtime; no alignment needed | LRU arena, **RAM-tiered** slot count | bounded 2-arena background `pread` pipeline |
+| **qwen-fieldfare** | `pread`, `Q4EXP02` container, 4 KiB header | **implicit** — uniform 1,769,472 B stride, 16 KiB alignment | **SLRU** (probationary+protected), per-layer capacity distributed by demand, **floor of 8 slots/layer** | speculative L+1 into spare slots; 3 projections fired concurrently |
+| **q36** | per-expert `pread` on the GGUF fd; `posix_fadvise(RANDOM)`, `DONTNEED` | GGUF `abs_offset` + per-slot gate/up/down offsets | decayed routing-frequency victim + LRU tiebreak, halved every 16 tokens | dedicated prewarm pthread, 512 MiB window; hotlist seeded at startup |
+| **apus** | `pread`, mmap explicitly rejected | `apus.index.json` `expert_slabs{layer,expert,shard,offset,nbytes}`, verified single-shard | per-layer LRU + LFRU pins + **RSS guard** + slab freelist | pthread pool; pilot predicts L+1 from L's router, **79.6% recall** |
+| **flash-moe** | per-expert `pread` into Metal buffers | none at runtime; 60 flat per-layer files, fixed stride | **none — "trust the OS"** (~71% natural page-cache hit) | persistent I/O pool, A/B double-buffered expert sets |
+| **samosa-chat** | `pread` + `posix_fadvise`, **lazy `O_DIRECT` twin fds** (buffered 0.8 vs O_DIRECT 2.3+ GB/s measured) | safetensors JSON + streaming `expert_offsets[]/expert_sizes[]` | byte-budget LRU/2Q with per-layer floors | `WILLNEED` per expert only — no threads, no prediction |
+| **siphon.cpp** | **GDS/cuFile** `cuFileBatchIOSubmit` + `O_DIRECT`, 20 worker threads | GGUF tensor offsets + `expert_stride = total/n_experts`, 16 KiB pool alignment, sidecar manifest | **hybrid ARC** (recent/frequent) + hit-count retention, execution pins | EWMA of transfer_us vs layer_compute_us sets prefetch distance |
+| **slipstream-schero94** | `pread` only — "mmap is never used"; `POSIX_FADV_RANDOM` + `DONTNEED` | PGRN v1 container, `PGRN_ALIGN=16384`, 26-byte dir records | fixed-slot **CLOCK-LRU-K**, HOT/WARM tiers, hard resident cap, RAM admission gate | parallel cold reads, `io_width` threads |
+| **Qwen-MoE-Router-exp** | mmap (inherited, deliberately) | none | none | none |
+
+### The convergent design
+
+1. **`pread` with a per-expert offset table**, not mmap. `flash-moe` measured mmap of expert
+   files as **5× worse** than pread (per-page faults).
+2. **Coalesce each expert into one contiguous slab** so a routed expert is *one* read:
+   `apus` packs gate_up+down into a 6,291,456 B slab; `flash-moe` uses a fixed
+   7,077,888 B expert stride with 9 components at fixed in-expert offsets; `qwen-fieldfare`
+   fires the 3 projections **concurrently** to collapse 9 reads. This is the single most
+   repeated structural idea.
+3. **16 KiB alignment**, everywhere (`PGRN_ALIGN`, `flash-moe` stride, `qwen-fieldfare`
+   header, siphon pool alignment). Page/block alignment is what makes a read one extent.
+4. **A bounded slot pool with a frequency-aware eviction policy** — LFU-aging, decayed
+   routing frequency, SLRU, CLOCK-LRU-K, ARC. Notably **plain LRU is wrong** for
+   layer-monotonic access (`q36` skips past layers during prefill for exactly this reason),
+   and `qwen-fieldfare`'s **floor of 8 slots/layer** is load-bearing: with top-8 routing a
+   layer below 8 slots misses *every* token.
+5. **A hard RAM admission gate** — `slipstream-schero94` refuses a cache that would induce
+   swapping (`peregrine_admission.c:15-71`). `qwisp`'s own field data: a 128-slot tier
+   (~11.4 GB wired) **collapsed ~10× on a 16 GB Mac**; 64 slots recovered 6×.
+
+### The proven way to stream experts *inside llama.cpp*
+
+Two repos independently implement the same seam, which is the most directly applicable
+finding here for us:
+
+- **`siphon.cpp`**: an eval callback intercepts a synthetic graph tensor
+  `moe_selected_experts_ds-<layer>` (`llama-context.cpp:3528`), reads the ids back to host
+  (`:3596-3606`), streams the experts, **repoints `w->data` at the slot pool and shrinks
+  `w->ne[2]` to the slot count** (`:3679-3727`), then rewrites the id tensor in place with
+  slot ids (`:3730-3737`) so `MUL_MAT_ID` runs over a tiny pool. Restored after `ffn_moe_out`.
+- **`slipstream-schero94`**: a 4,488-line patch pinned to llama.cpp `79bba02a6741`
+  (`patches/slipstream-seams.patch`). `build_moe_ffn` gains `compact_slots`; duplicates the
+  top-k tensor on callback `"pgrn_moe_topk_raw"` (`:2406-2423`) and swaps
+  `selected_experts` → `expert_slots` in every `mul_mat_id`/`add_id` (`:2432-2506`).
+
+`slipstream-schero94` is the closest thing to a drop-in: it is a llama.cpp fork and it is the
+only repo here whose modifications are shipped as a reviewable patch against a pinned commit.
+Its own benchmarks: 35B Q4 on internal NVMe goes **5.5 → 19 tok/s as the resident cache grows
+2 → 14 GiB** (21% → 86% hit rate), decode is ~90% SSD-fetch-bound, and `io=8-16` with
+`ubatch 2048` gave **2.7–3.2× prefill**. Caveat it states itself: Linux/CUDA is untested.
+The largest documented lever in that file is not code at all — **2.7× just from moving the
+streamed file to the internal NVMe.**
+
+---
+
+## 3. Our own measurement contradicts the top recommendation
+
+The web pass ranked "kill mmap fault-around read-ahead" first, citing llama.cpp #23324
+(+53% from an I/O-path swap). We tested the cheap version of it, and it is a trap.
+
+`madvise(MADV_RANDOM)` on llama.cpp's GGUF mapping, applied via `/proc/self/maps` (the
+descriptor belongs to llama.cpp, but the VMA is ours to advise), same evicted cache and 8 GiB
+cap:
+
+| | default | `MADV_RANDOM` |
+|---|---|---|
+| decode bytes read | 42.0 GB | **26.0 GB** |
+| decode time | 56.0 s | **368.0 s** |
+| effective throughput | 750 MB/s | **71 MB/s** |
+
+Reads fell 38% and the run got **6.6× slower (368 s)**. Disabling read-ahead turns scattered
+expert faults into synchronous random reads, and NAND random-read *latency* — not bandwidth —
+takes over. **The 2.15× "amplification" is prefetch that pays for itself.**
+
+The distinction the web pass blurred: #23324 replaced mmap with an **async `pread` pool over
+exact expert extents with pipelining**, which is not the same as suppressing read-ahead on
+demand faults. That is a rewrite of the weight-access path, and it is what the two llama.cpp
+forks above actually do.
+
+---
+
+## 4. What the literature says is worth doing — and what is dead
+
+**Dead ends, with reasons:**
+
+- **Lossless compression of quantized weights.** Tested and rejected in print
+  (arXiv:2508.19263): 4-bit value streams are essentially incompressible — only block scale
+  factors compress, and those are ~11% of a Q4_K block. The best rANS decoder runs
+  **114–120 MB/s**, far below our 750 MB/s. Decompression would cost more than the I/O saved.
+- **Sophisticated cache-eviction policies.** arXiv:2608.07911 finds a 44–46% gap to the
+  offline-optimal eviction exists, but a causal next-use rule recovers **none** of it (−11.4%)
+  and picks the optimal victim 3.4% of the time versus LRU's 20.6–22.1%. Separately, against
+  LRU an explicit co-activation prefetcher *wastes* bandwidth (LRU already retains co-firing
+  experts). The cache-policy literature substantially overstates what simple policies recover.
+- **Expert reordering by co-activation.** `flash-moe` measured 0%: at 3.9–7 MB per expert,
+  NVMe ignores scatter at that granularity. Coalescing helps; grouping does not.
+- **Learned next-expert predictors.** Every prediction result found is evaluated
+  GPU-resident (PCIe/HBM-shaped), and Pre-gated MoE requires retraining. The one macOS
+  implementation that shipped it (`dwijenpatel`) measured it neutral-to-negative.
+
+- **Warming the page cache from outside the engine.** Tested twice, both worse. Layer-ordered
+  `POSIX_FADV_WILLNEED` over the 40 layers' expert extents changed `read_bytes` by **0.14 GB
+  across a whole run** — the kernel caps an advised window to a small multiple of
+  `read_ahead_kb` (128 KB here), so 16 MB chunks became ~128 KB requests and the advice was
+  never acted on. Replacing it with a real `preadv` that *did* read all 18.3 GB made the run
+  worse: read 42.0 → **56.1 GB**, time 56.0 → **57.56 s**, because clean unreferenced pages are
+  the first reclaim victims under an 8 GiB cap — evicted before the decoder arrives, then
+  faulted in a second time. The prior art's "hard RAM admission gate" is the same lesson from
+  the other side: under a fixed cap, stage in the engine's own buffers, never the page cache.
+
+**Worth doing:**
+
+- **Minimize the number of *distinct* experts touched per pass (T), not the batch size.**
+  OEA's latency model is `b·T + a·Bk` with R²>0.99 — latency is linear in T. Batch-aware
+  routing (Lynx, arXiv:2411.08982 — AffinityBinning; OEA, arXiv:2511.02237) remaps
+  token→expert assignments within a batch so tokens piggyback experts already loaded:
+  **39% MoE decode-latency cut on Qwen3-30B at batch 16**, <1 pp accuracy loss. Our ubatch is
+  already ≥16, so the reuse pool is larger than their evaluation. **Lossy.**
+- **REAP router-weighted expert pruning** (arXiv:2510.13999, ICLR 2026): one-shot, **no
+  fine-tuning**, 50% compression at ~96–97% retention on Qwen3-Coder-480B. Pruning provably
+  beats merging — merging destroys the router's input-dependent modulation. Halves bytes read.
+  **Lossy.**
+- **Expert-contiguous repacking**: measured **36× fewer page faults** (192 vs 6,912 pages per
+  expert) and, with Q4 experts (~2.2 MB), pipelining can hide I/O entirely — compute-bound
+  even at 0% cache hit. **Lossless.**
+
+---
+
+## 5. Ranked recommendations for our path
+
+Given our measured state (60.2 GB / 56.6 s, ~100% I/O-bound, 8 GiB cap):
+
+1. **Do not kill read-ahead.** Measured 6.6× regression. Leave mmap alone until there is a
+   real pread pool to replace it with.
+2. **Adopt the slot-remap seam inside llama.cpp** — port `slipstream-schero94`'s patch or
+   replicate siphon's `w->data` repoint. This is the only route to *controlling* which
+   experts are read. Two independent implementations exist; one ships as a patch against a
+   pinned commit. **Lossless, highest ceiling.**
+3. **Repack experts to a contiguous, 16 KiB-aligned slab, one read per expert.** Lossless,
+   and `apus` shows the exact layout (`expert_slabs`: layer, expert, shard, offset, nbytes).
+4. **Bound the cache with a RAM admission gate, and floor it at 8 slots/layer.** `qwisp`'s
+   10× collapse at 11.4 GB wired and `qwen-fieldfare`'s 8-slot floor both apply directly to
+   an 8 GiB budget.
+5. **If quality budget allows, REAP 50% pruning** — the only lossy lever with a one-shot,
+   no-fine-tuning 50% byte reduction.
+6. **Skip:** lossless weight compression, elaborate eviction policies, co-activation
+   reordering, learned predictors. Each has a measured negative or an inapplicable regime.
+7. ~~**Cheap and independent of all the above:** move the GGUF to the internal NVMe — the
+   largest single documented lever (2.7×) in the closest repo to ours.~~ **Already taken, and
+   retracted.** Measured: the GGUF is *already* on `/dev/nvme0n1p5` (Kingston SFYRD4000G,
+   `rotational=0`), and `dd iflag=direct bs=1M` reads it at **2.4 GB/s**. Scoring achieves
+   ~750 MB/s — ~31% of the device — so the gap is access pattern, not placement. This was
+   the one recommendation in this list that cost nothing and it was void before it was read.
+
+8. **Mildly oversubscribe the CPU threads.** Not in any of the 12 repos, and the largest
+   measured win found after the survey: **54.6 s → 38.4 s (−29.6%)** at 4/3 of hardware
+   threads, lossless, read volume unchanged. A thread waiting on an expert page fault is not
+   runnable, so an expert-streaming decode wants more runnable threads than the CPU has.
+   The project's own runner was pinning half the host for no recorded reason.
+
+**The honest summary:** every working engine here uses pread over an offset table with a
+bounded slot cache, and the two that stream *inside llama.cpp* both do it by rewriting the
+expert-id tensor so `MUL_MMAT_ID` sees a small pool. Our mmap-based path is the outlier, and
+its 2.15× overhead is prefetch rather than waste — which is why the cheap fix backfired and
+the real fix is a weight-access rewrite.
+
+**Follow-up, measured after the survey** (`SEMIF_LLAMACPP_SSD.md` §6c): of the seven
+recommendations above, the only one that paid was the one *not* in the prior art —
+**CPU thread oversubscription, −29.6%**. The two prefetching routes (#1 and #2's cheap
+cousin) both measured worse, the storage lever (#7) was already taken, and the ~2× read
+amplification turned out not to be a second ubatch sweep. The remaining real lever is still
+#2/#3, and it is a rewrite, not a knob.
+
+---
+
+## Appendix — artifacts and method
+
+- Clones: `offload_projects/` (12 repos, shallow). The two `slipstream` repos collided on
+  clone; the second is `slipstream-schero94`.
+- Our experiment: `/tmp/probe_madvise.py`, `/tmp/run_madvise.sh` (evicted cache, 8 GiB cap,
+  `MADV_RANDOM` applied to the GGUF VMA found in `/proc/self/maps`).
+- Phase attribution of reads: `/tmp/probe_phases.py` (load vs decode; `/proc/self/io`).
+- Five parallel source/web passes over: Edge0; `q36`+`apus`+`flash-moe`;
+  `Mference`+`qwisp`+both `slipstream`s+`qwen-fieldfare`; `samosa-chat`+`slipstream-schero94`+
+  `siphon.cpp`+`Qwen-MoE-Router-exp`; and the published-algorithms web pass.
+- file:line citations throughout are from the clones at the revisions fetched 2026-09-21.
+# Qwen3.6-35B-A3B → **SSD** offload: certified list
+
+Scope: Qwen3.6-35B-A3B. **No architecture filter.** 76+ repos gathered across ~26
+architecture-agnostic queries, then each README read to certify two things:
+
+1. Does it actually run **Qwen3.6-35B-A3B**?
+2. Does it actually **stream expert weights from SSD/NVMe** — not RAM/VRAM offload?
+
+Last verified 2026-09-21.
+
+> **Correction (2nd revision).** An earlier version of this file claimed Edge0 had no
+> GitHub repo. It does — [Edge0-AI/Edge0](https://github.com/Edge0-AI/Edge0), 2,036★ —
+> and it is now the largest certified entry here.
+>
+> **Methodology gap that caused it:** my query set was model-first ("35B-A3B" + SSD terms).
+> That structurally misses general-purpose engines that *support* Qwen3.6-35B-A3B but
+> don't lead with the model name in their description. `FreeToken` (13,460★) was also
+> missed the same way.
+
+---
+
+## CERTIFIED — 11 repos
+
+| Repo | ★ | Arch / Platform | Certifying evidence (verbatim) |
+|---|---|---|---|
+| [Edge0-AI/Edge0](https://github.com/Edge0-AI/Edge0) | **2036** | Apple Silicon (MLX); CUDA pluggable | "An open-source streaming MoE inference framework — **SSD expert offload** + Recover-LoRA + prerouter routing prediction." `edge0-35b` = `Edge0/Edge0-35B-A3B-preview`, "built on open sparse-MoE base models (**Qwen3.6-35B-A3B**)". Apache-2.0. |
+| [NeelM0906/Mference](https://github.com/NeelM0906/Mference) | 118 | Apple Silicon | "…the current token from SSD. The complete model does not have to fit in RAM." |
+| [deepanwadhwa/samosa-chat](https://github.com/deepanwadhwa/samosa-chat) | 55 | Apple Silicon (Metal) | "2-bit MoE with routed experts streamed from SSD"; "Qwen performance is dependent on SSD throughput." |
+| [Ninnix/q36](https://github.com/Ninnix/q36) | 53 | **Vulkan + Metal; AMD BC-250** | "8 GB Macs are intended to use SSD streaming." Primary target is an AMD BC-250. |
+| [penta2himajin/qwisp](https://github.com/penta2himajin/qwisp) | 12 | Apple Silicon | "RAM sets the tier automatically: `<32 GB` streams experts from flash." |
+| [Manohar20006/siphon.cpp](https://github.com/Manohar20006/siphon.cpp) | 9 | **CUDA (Windows/Linux)** | "Run Qwen3.6 35B-A3B MoE locally on a 6 GB VRAM laptop… with **SSD-based MoE expert streaming**." |
+| [dwijenpatel/slipstream](https://github.com/dwijenpatel/slipstream) | 5 | Apple Silicon (Metal) | "reads, for each token, only the eight experts that token routes to" from SSD; 31.1 tok/s in 5.6 GB. |
+| [Schero94/slipstream](https://github.com/Schero94/slipstream) | 3 | Apple Silicon (llama.cpp fork) | "Qwen3.6-35B-A3B (Q4), streamed from the internal NVMe." |
+| [tanishqpatil/qwen-fieldfare](https://github.com/tanishqpatil/qwen-fieldfare) | 2 | Apple Silicon (Metal) | "Streams active MoE experts from SSD." |
+| [bricesommers/apus-qwen3.6-35B-A3B](https://github.com/bricesommers/apus-qwen3.6-35B-A3B) | 0 | **C engine (portable)** | "routed experts from NVMe through a bounded RAM cache"; "~1.1 GiB/token of reads". |
+| [anwarth/Qwen-MoE-Router-exp](https://github.com/anwarth/Qwen-MoE-Router-exp) | 0 | llama.cpp (GPU-less PC) | Disk-backed via llama.cpp mmap. **Caveat:** README warns the streaming "is effectively inactive" if the OS doesn't page. |
+
+### Architecture
+Apple Silicon 7 · CUDA 1 · portable C 1 · Vulkan/AMD 1 · llama.cpp generic 1.
+
+---
+
+## REJECTED — looked like hits, are not
+
+| Repo | ★ | Why rejected |
+|---|---|---|
+| [FlashML-org/FreeToken](https://github.com/FlashML-org/FreeToken) | **13460** | Supports Qwen3.6-35B-A3B, but **not SSD**. README + all four docs (`models/quickstart/cli/install.md`) contain **zero** disk/SSD/NVMe terms. Mechanism is VRAM expert caches ("dynamic runtime VRAM re-allocation between expert caches and KV memory") + CPU–GPU co-execution. Also `freetoken-kernel-cache/`. |
+| [AEON-7/…heretic-NVFP4-DFlash](https://github.com/AEON-7/Qwen3.6-35B-A3B-heretic-NVFP4-DFlash) | 144 | Regex matched "**Re-validated**". vLLM/DGX Spark — weights in VRAM. |
+| [Sandermage/sndr_core_engine](https://github.com/Sandermage/sndr_core_engine) | 132 | Matched "**spreading activation**". Knowledge-graph app, not an inference engine. |
+| [lastloop-ai/vllm-blackwell-guide](https://github.com/lastloop-ai/vllm-blackwell-guide) | 23 | Matched "**batch processing**". vLLM, VRAM-resident. |
+| [hanxiao/Qwen3.6-35B-A3B-MTP-L4](https://github.com/hanxiao/Qwen3.6-35B-A3B-MTP-L4) | 18 | "SSD" was a **GCS bucket** staging step. |
+| [hanxiao/Qwen3.6-35B-A3B-L4-deploy](https://github.com/hanxiao/Qwen3.6-35B-A3B-L4-deploy) | 17 | `--boot-disk-type=pd-ssd` is a **GCE boot-disk flag**. |
+
+## Satellite repos — Edge0 ecosystem, not engines
+- [dogebi/edge0-35b-atlas](https://github.com/dogebi/edge0-35b-atlas) — WebGL tensor atlas for Edge0-35B-A3B. Visualization.
+- [hi-sch/basechat](https://github.com/hi-sch/basechat) — SwiftUI frontend that drives the `edge0` CLI.
+- [Mesutcydev/ondevice-core](https://github.com/Mesutcydev/ondevice-core) — iPhone app bundling the Edge0 runtime.
+- [bayerhazard/aimighty-freetoken](https://github.com/bayerhazard/aimighty-freetoken) — Olares packaging of FreeToken (⇒ not SSD, inherits the rejection above).
+
+## Also excluded
+- **`danveloper/flash-moe` (4147★)** — most-cited repo here, but runs **Qwen3.5-397B-A17B**.
+  Its `paper/` and `repack_experts.py` remain the best technical writeup on SSD expert
+  streaming, but it is not a 35B runtime.
+
+---
+
+## ⚠️ What "certified" means here
+
+**README-level certification only.** I read READMEs and API metadata (`raw.githubusercontent`
++ GitHub API). I did **not** clone, read source, build, or run any of these. So
+"certified" = "the documentation asserts it," the same standard I warned you not to
+trust for tok/s numbers. An SSD claim can be a design goal, a stub, or stale text.
+
+To actually confirm, each repo needs: a real disk read path (`pread`/`O_DIRECT`/`io_uring`
+on a file descriptor for expert tensors, not whole-file `mmap`), a populated expert offset
+table, and evidence it builds. **`siphon.cpp` (9★) and `apus` (0★) are the two non-Mac
+picks where this matters most** — and Edge0, despite 2k stars, is unverified at source level.
+# Qwen3.6-35B-A3B decisions from SSD — the path we took
+
+**Verdict: neither of the two options on the table.** Not Path A (point the existing
+backend at a GGUF and hope), not Path B (write an Edge0 backend). The optimal path is
+a **~20-line patch to SemIf's existing llama.cpp backend**, because that backend already
+satisfies the precondition for SSD expert streaming — it just never says so out loud.
+
+---
+
+## 1. Why no expert-offload flags are needed
+
+The whole `-ot ".ffn_.*_exps.=CPU"` / `--cpu-moe` / `--n-cpu-moe N` family exists to
+keep **experts on the CPU while the other layers go to the GPU**. They are a
+*partitioning* control.
+
+SemIf's backend already sets:
+
+```python
+params.n_gpu_layers = 0     # src/semif_phase1/llamacpp_backend.py
+```
+
+Zero GPU layers means every layer — attention and experts alike — is already on the
+CPU. The partitioning those flags perform has nothing left to partition. So there is
+no flag to pass and no passthrough to build.
+
+Streaming turns out to be the **default**, expressed through one field — and blocked by
+a second one:
+
+| field | default | what it does here |
+|---|---|---|
+| `load_mode` | `LLAMA_LOAD_MODE_AUTO` | Resolves to `mmap` (`llama-model-loader.cpp:554`). The GGUF stays a mapped file: a routed expert is read from disk on first touch and its page stays in the page cache. |
+| `use_extra_bufts` | `true` | **The one that has to change.** It registers the CPU backend's extra buffer types, which include *repack* — the step that materialises expert tensors into anonymous RAM at load time. See §2b. |
+
+`mmap` without `mlock` is exactly the "whole-file `mmap`, page-cache thrash" mechanism
+the earlier research flagged — but here it is the *intended* path, not a fallback.
+`LLAMA_LOAD_MODE_MLOCK` is what would kill it: it pins every expert in RAM, and a
+checkpoint larger than memory then fails to load rather than merely running slow.
+
+**A trap worth naming.** The obvious spelling of this — `params.use_mmap = True` /
+`params.use_mlock = False` — is a **silent no-op** on this llama.cpp. Those fields were
+removed from `llama_model_params`; the struct carries `load_mode` instead. Because a
+ctypes `Structure` accepts arbitrary Python attributes, the assignment *succeeds*, and
+`bool(params.use_mmap)` reads back as `True` — so metadata built from it is
+self-confirming and wrong. The first version of this patch did exactly that and
+therefore changed nothing; the flags and the metadata both had to move onto
+`load_mode` / `use_extra_bufts` before either meant anything.
+
+That is also why "it loaded fine on the big host" proved nothing: streaming was already
+on by default, so a no-op patch and a working patch look identical there.
+
+## 2. What the patch changes
+
+`src/semif_phase1/llamacpp_backend.py`, inside `_cpu_model_params`:
+
+- Sets `load_mode` **explicitly** (default `mmap`) instead of inheriting `AUTO`, with a
+  `SEMIF_LLAMA_LOAD_MODE` override accepting `auto|none|mmap|mlock|mmap_mlock|direct_io`.
+  An unknown value raises rather than silently falling back.
+- Sets `use_extra_bufts = False` explicitly, with a `SEMIF_LLAMA_EXTRA_BUFT` override.
+  This is the load-time repack switch (§2b), and it is the difference between a
+  >RAM checkpoint loading and being OOM-killed.
+- Records `load_mode`, `load_mode_name` and `use_extra_bufts` in the result metadata, so
+  every output row is self-describing about how its weights were served.
+- Docstring states the streaming contract, including why `use_mmap` / `use_mlock` are
+  *not* the controls here.
+
+`pytest tests/test_llamacpp.py` passes — the tests assert `load_mode` and
+`use_extra_bufts`, and additionally assert the returned params object has **no**
+`use_mmap` / `use_mlock` attribute, so a regression back to the inert spelling fails
+loudly instead of silently doing nothing.
+
+`direct_io` is exposed but not the path: it opens the GGUF with `O_DIRECT`, which reads
+tensors into allocated buffers rather than mapping them (`llama-mmap.cpp:199`). That is
+a *faster load*, not a smaller footprint — it makes residency worse, not better.
+
+## 2b. The catch: llama.cpp repacks expert tensors into RAM
+
+`load_mode=mmap` is **necessary but not sufficient**. The 8 GiB capped
+run was **OOM-killed**, and it did not die during inference — it died during load:
+
+```
+repack: repack tensor blk.18.ffn_up_exps.weight with q4_K_8x8
+run_semif_35b_ssd.sh: line 81: 1123053 Killed
+```
+
+Layer 18 of 40. The culprit is the CPU backend's **repack** step: for certain quantized
+types (here `q4_K` experts) llama.cpp converts each tensor into a SIMD-friendly
+interleaved layout (`q4_K_8x8`) at load time. That conversion **materialises the weights
+into anonymous memory**, so those tensors stop being file-backed and demand-paged — the
+exact property the streaming path depends on.
+
+So on a small-RAM machine the failure mode is not "slow inference", it is **"cannot load
+at all"**, and it presents as an out-of-memory kill rather than a configuration problem.
+This is precisely the thing that would have blown up on the M3, and it is invisible if
+you only ever test on a big host.
+
+### The control is `use_extra_bufts` — and it is not an environment variable
+
+Repack is reached through the CPU backend's *extra buffer types*.
+`make_cpu_buft_list` adds them only when `use_extra_bufts` is set
+(`llama-model.cpp:942`), and the repack buffer type is one of them — it comes from
+`ggml_backend_cpu_repack_buffer_type()` (`ggml-cpu.cpp:65`). Because
+`llama_model_default_params()` sets `use_extra_bufts = true`, **repack is on by default**,
+and no command-line flag governs it: it has to be turned off in the params struct.
+
+Measured on the real checkpoint — two loads, counting `repack` lines:
+
+| `use_extra_bufts` | repack lines | load |
+|---|---|---|
+| `false` | **0** | loaded |
+| `true` (default) | **119** | loaded |
+
+The patch therefore sets it `false`. The cost is prompt-processing throughput, since the
+interleaved kernels are the faster ones; `SEMIF_LLAMA_EXTRA_BUFT=1` restores llama.cpp's
+default whenever the checkpoint fits in RAM and speed matters more than residency.
+
+**Two wrong answers worth recording, because both looked right.** The first was
+`GGML_CPU_REPACK=0`, inferred from the `CPU_REPACK` string in `libggml-cpu.so`. It is
+**disproven** — the run still emitted 117 repack lines. That string is the buffer type's
+*name*, returned by `ggml_backend_buft_name`, not an environment key. The second was
+reading `use_extra_bufts` off a Python-constructed `llama_model_params()` and seeing
+`False`. That struct is zero-initialised by the binding and is not the one llama.cpp
+uses, so it reported the exact opposite of the real default (`true`,
+`llama-model.cpp:2489`). Both errors had the same shape: a plausible-looking value read
+from the wrong place.
+
+
+## 3. Prerequisites found on disk
+
+| Thing | Status |
+|---|---|
+| Target GGUF | **already local** — `/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-UD-Q4_K_S.gguf`, 19,926 MB |
+| GGUF identity | `general.architecture=qwen35moe`, `general.name=Qwen3.6-35B-A3B`, metadata `model_type=qwen3_5_moe` |
+| SemIf install | **absent** at first — fresh clone; needs `uv venv --python 3.11` + `llama-cpp-python==0.3.35` (now done, `.venv/`) |
+| Tokenizer | **was not cached** — fetched `Qwen/Qwen3.6-35B-A3B` (`vocab.json` + `merges.txt`; this repo ships **no** `tokenizer.json`) |
+| Pinned `llama-cpp-python` | `0.3.35` ships **sdist only, zero wheels on PyPI** — a source build is unavoidable. The 0.2.39 in `~/.local` uses the **old C API** (`llama_load_model_from_file`, no `llama_get_memory`) and cannot run this backend |
+
+The tokenizer requirement is worth stating plainly: SemIf's llama.cpp path does not
+need the model's `model_type` to be supported — it only needs the **tokenizer** from HF,
+because it re-tokenizes through the GGUF vocabulary and refuses to score if the two
+disagree (`_verify_vocabulary`). That is why a `qwen3_5_moe` GGUF works here even though
+`core.py` only recognises `qwen3_5` / `qwen3_5_text` for the torch backend.
+
+## 4. The measurement problem — read this before trusting any number
+
+**This host has 62 GiB RAM.** The checkpoint is 19.5 GiB. It fits in page cache, so
+`mmap` will serve nearly every expert from RAM and the SSD path will never be exercised.
+Any latency measured here is a **page-cache latency, not an SSD latency.**
+
+### A cgroup cap alone does NOT fix this — measured, not assumed
+
+`--simulate-8g` runs the scorer under `MemoryMax=8G` with swap disabled. It **does not
+force a single disk read**, because a cgroup does not re-charge a page that is already
+cached:
+
+| evidence | value |
+|---|---|
+| `fincore` on the GGUF | **19.5 G resident** — the whole file is in the host page cache |
+| `read_bytes` for the scored process, sampled every 3 s across the whole run | **0** |
+| capped scope `memory.peak` | **632 MB** |
+| capped scope `memory.events` `max` / `oom` | **0 / 0** — the 8 G limit never bound |
+
+Only the anonymous working set (KV cache, branch states, compute buffers) is charged to
+the new scope. The file pages were faulted first by the long-lived terminal scope, and
+that is the cgroup they belong to — a fresh `systemd-run` scope reuses them for free.
+The host's session scope shows a **40 GB** peak, which is where that charge actually sits.
+
+So the cap is inert while the page cache is warm, and any "8 GiB capped" number taken
+without evicting first is a page-cache number wearing a cap. The failure is silent:
+nothing errors, the run simply finishes fast — and it will look *faster* under the cap
+than without it, which is the tell.
+
+### What actually forces the SSD path
+
+Evict the file from page cache immediately before the run. Unprivileged
+`posix_fadvise(POSIX_FADV_DONTNEED)` is sufficient — no root required:
+
+```
+before: RES 19.5G  PAGES 5100834
+after:  RES    0B  PAGES       0
+```
+
+With the cache dropped, the run's own reads are charged to its scope, the cap binds, and
+`read_bytes` becomes direct evidence that storage was touched. Use that counter as the
+check rather than wall-clock time: a warm run and a disk run can look similar if the SSD
+is fast, but `read_bytes` cannot be faked. `sudo` is not needed and `drop_caches` is not
+needed — which matters, since this box has no passwordless sudo.
+
+**And the harness has to be checked, not trusted.** The first version of the eviction step
+was gated on `$SIMULATE`, which the re-exec'd child never saw: it passed `"$0"` with no
+arguments, so `--simulate-8g` was dropped and the run silently took the warm path —
+`fincore` still reporting 19.5 G, `total_seconds` still ~9 s. The flag was applying the
+cgroup cap (that came from `systemd-run` itself) while quietly skipping everything else
+gated on it. Eviction is now gated on an exported `SEMIF_CAPPED`, and the script prints
+the `fincore` line before every run, so cache state is observed rather than assumed.
+Verify a measurement harness by checking that it *fails* when it should, not only that it
+runs.
+
+The second thing to expect: **prefill and decode are not symmetric.**
+
+- **Decode** touches ~8 experts per layer per token — small, sequential, SSD-friendly.
+- **Prefill** over N tokens touches most of the 256 experts per layer — large, scattered,
+  SSD-hostile.
+
+SemIf reads decision logits from a **prefill**. A JEV decision is therefore the
+*expensive* case, not the cheap one. This is the reason `--max-tokens` matters: the
+default is **4096**, and a DOM snapshot will exceed it. The script defaults to 8192 and
+will need tuning upward.
+
+This is also the honest re-read of Edge0's 113–140 tok/s cold prefill claim. **An earlier
+version of this section called that figure "arithmetically impossible if the whole ~20 GB
+model is read per pass". That claim is withdrawn — it was wrong.** 3,300 tokens at
+113 tok/s is 29.2 s, and a full 20.88 GB read in that window is **0.72 GB/s**, about 7×
+*under* an M4 Pro's SSD. The number was never impossible; the error was assuming a
+per-token full routed-set read, which is exactly what Edge0's design avoids.
+
+What actually happens: `staged_k4()` holds **4 fixed expert slots** (`staged_n` default 8,
+`cache_slots=64`) and a 33-head prerouter starting at layer 7 predicts the *next token's*
+routing one token ahead, so most steps move almost nothing — `docs/streaming.md` states

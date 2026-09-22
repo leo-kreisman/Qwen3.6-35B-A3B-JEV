@@ -1,0 +1,9 @@
+# SOURCE: https://arxiv.org/abs/2607.04164
+
+[Submitted on 5 Jul 2026]
+
+# Title:BrownoutMoE: Structure-Aware Expert Grouping for Efficient and Accurate LLM Web-based Services
+
+[View PDF](/pdf/2607.04164) [HTML (experimental)](https://arxiv.org/html/2607.04164v1)
+
+> Abstract:Mixture-of-Experts (MoE) large language models (LLMs) are increasingly deployed in Web-facing services, where inference must be both accurate and responsive under bursty demand. Although MoE models improve parameter efficiency through sparse expert activation, efficient MoE inference remains challenging in practice. A major reason is the highly imbalanced expert access pattern during inference: a few hot experts process most routed tokens, while many cold experts are rarely activated, leaving GPU parallelism underutilized. Existing systems mainly optimize runtime execution, such as scheduling, communication overlap, and kernel fusion, but usually preserve the original expert organization and therefore do not address the structural inefficiency caused by fragmented expert usage. In this paper, we present \textbf{BrownoutMoE}, a structure-aware optimization framework for efficient and accurate MoE inference services. Inspired by the brownout paradigm in service computing, BrownoutMoE reorganizes experts into groups to improve utilization and system efficiency while maintaining service quality. Specifically, we formulate layer-wise expert grouping as a learning problem and employ reinforcement learning to discover grouping strategies that minimize accuracy degradation. We further introduce a grouping-consistent distillation process to produce deployable models that are compatible with standard inference pipelines. Experimental results demonstrate that BrownoutMoE reduces accuracy degradation by up to 71.4% and improves throughput by up to 2.24x over baselines.

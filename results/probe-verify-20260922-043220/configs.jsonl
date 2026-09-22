@@ -1,0 +1,4 @@
+{"note":"device read deltas are /sys/block/nvme0n1/stat sectors*512, whole device; proc deltas are /proc/self/io read_bytes, this shell and its reaped children"}
+--- ncmoe=99 ---
+{"config": {"ncmoe": 99, "prefill_tok_s": 8.93, "prefill_seconds": 15.11, "gen_tok_s": 6.12, "gen_seconds": 5.22, "load_wall_seconds": null, "baseline_read_gb_proc": 23.57, "baseline_read_gb_dev": 23.57, "workload_read_gb_proc": 50.77, "workload_read_gb_dev": 50.77, "inference_read_gb_dev": 27.2, "mb_read_per_gen_token": 850.0, "memory_peak_gib_workload": 8.0, "memory_events_max_workload": 35460, "memory_peak_gib_baseline": 8.0, "memory_events_max_baseline": 7347}}
+# ncmoe=99 load_reads proc=23.57 dev=23.57 GB | workload_reads proc=50.77 dev=50.77 GB | peak=8.00 GiB max_events=35460

@@ -1,0 +1,142 @@
+{
+  "gguf": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-UD-Q4_K_S.gguf",
+  "zstd_level": 6,
+  "sample_mb_per_tensor": 2.0,
+  "rows": [
+    {
+      "tensor": "blk.0.ffn_down_exps.weight",
+      "layer": "0",
+      "blocks_sampled": 13888,
+      "blocks_total": 1048576,
+      "fp16_d_dmin": {
+        "raw": 55552,
+        "ent_bits": 6.237,
+        "entropy_floor_ratio": 1.2827,
+        "zstd_ratio": 1.2761,
+        "zstd_pct": 78.36
+      },
+      "packed6": {
+        "raw": 166656,
+        "ent_bits": 7.3473,
+        "entropy_floor_ratio": 1.0888,
+        "zstd_ratio": 1.0837,
+        "zstd_pct": 92.28
+      },
+      "payload": {
+        "raw": 1777664,
+        "ent_bits": 7.3789,
+        "entropy_floor_ratio": 1.0842,
+        "zstd_ratio": 1.1128,
+        "zstd_pct": 89.86
+      }
+    },
+    {
+      "tensor": "blk.18.ffn_down_exps.weight",
+      "layer": "18",
+      "blocks_sampled": 13888,
+      "blocks_total": 1048576,
+      "fp16_d_dmin": {
+        "raw": 55552,
+        "ent_bits": 6.3343,
+        "entropy_floor_ratio": 1.263,
+        "zstd_ratio": 1.2565,
+        "zstd_pct": 79.59
+      },
+      "packed6": {
+        "raw": 166656,
+        "ent_bits": 7.1151,
+        "entropy_floor_ratio": 1.1244,
+        "zstd_ratio": 1.1189,
+        "zstd_pct": 89.37
+      },
+      "payload": {
+        "raw": 1777664,
+        "ent_bits": 7.7299,
+        "entropy_floor_ratio": 1.0349,
+        "zstd_ratio": 1.0308,
+        "zstd_pct": 97.01
+      }
+    },
+    {
+      "tensor": "blk.27.ffn_down_exps.weight",
+      "layer": "27",
+      "blocks_sampled": 13888,
+      "blocks_total": 1048576,
+      "fp16_d_dmin": {
+        "raw": 55552,
+        "ent_bits": 6.3716,
+        "entropy_floor_ratio": 1.2556,
+        "zstd_ratio": 1.2484,
+        "zstd_pct": 80.1
+      },
+      "packed6": {
+        "raw": 166656,
+        "ent_bits": 7.0863,
+        "entropy_floor_ratio": 1.1289,
+        "zstd_ratio": 1.1239,
+        "zstd_pct": 88.98
+      },
+      "payload": {
+        "raw": 1777664,
+        "ent_bits": 7.7358,
+        "entropy_floor_ratio": 1.0341,
+        "zstd_ratio": 1.0302,
+        "zstd_pct": 97.07
+      }
+    },
+    {
+      "tensor": "blk.36.ffn_down_exps.weight",
+      "layer": "36",
+      "blocks_sampled": 13888,
+      "blocks_total": 1048576,
+      "fp16_d_dmin": {
+        "raw": 55552,
+        "ent_bits": 6.3367,
+        "entropy_floor_ratio": 1.2625,
+        "zstd_ratio": 1.2565,
+        "zstd_pct": 79.59
+      },
+      "packed6": {
+        "raw": 166656,
+        "ent_bits": 7.1556,
+        "entropy_floor_ratio": 1.118,
+        "zstd_ratio": 1.1119,
+        "zstd_pct": 89.94
+      },
+      "payload": {
+        "raw": 1777664,
+        "ent_bits": 7.7233,
+        "entropy_floor_ratio": 1.0358,
+        "zstd_ratio": 1.0317,
+        "zstd_pct": 96.93
+      }
+    },
+    {
+      "tensor": "blk.9.ffn_up_exps.weight",
+      "layer": "9",
+      "blocks_sampled": 13888,
+      "blocks_total": 1048576,
+      "fp16_d_dmin": {
+        "raw": 55552,
+        "ent_bits": 6.1445,
+        "entropy_floor_ratio": 1.302,
+        "zstd_ratio": 1.295,
+        "zstd_pct": 77.22
+      },
+      "packed6": {
+        "raw": 166656,
+        "ent_bits": 7.1093,
+        "entropy_floor_ratio": 1.1253,
+        "zstd_ratio": 1.1201,
+        "zstd_pct": 89.28
+      },
+      "payload": {
+        "raw": 1777664,
+        "ent_bits": 7.7285,
+        "entropy_floor_ratio": 1.0351,
+        "zstd_ratio": 1.0309,
+        "zstd_pct": 97.0
+      }
+    }
+  ]
+}
