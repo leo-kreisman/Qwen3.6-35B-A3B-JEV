@@ -1,0 +1,63 @@
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Which observed element should receive the destination value 'London'?
+Answer: Element 1, the destination input, which is currently empty.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the observed departure value 'Sat, Oct 18' name the date the goal requests, 2026-10-20?
+Answer: No, it names a different date.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the origin input already hold the value the goal names as the starting point?
+Answer: Yes, it holds Zürich, the requested origin.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Is the trip type control already in the state the goal requires?
+Answer: Yes, 'One way' is the selected trip type.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Which observed element should receive the destination value 'London'?
+Answer: Element 1, the destination input, which is currently empty.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the observed departure value 'Sat, Oct 18' name the date the goal requests, 2026-10-20?
+Answer: No, it names a different date.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the origin input already hold the value the goal names as the starting point?
+Answer: Yes, it holds Zürich, the requested origin.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Is the trip type control already in the state the goal requires?
+Answer: Yes, 'One way' is the selected trip type.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Which observed element should receive the destination value 'London'?
+Answer: Element 1, the destination input, which is currently empty.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the observed departure value 'Sat, Oct 18' name the date the goal requests, 2026-10-20?
+Answer: No, it names a different date.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the origin input already hold the value the goal names as the starting point?
+Answer: Yes, it holds Zürich, the requested origin.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Is the trip type control already in the state the goal requires?
+Answer: Yes, 'One way' is the selected trip type.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Which observed element should receive the destination value 'London'?
+Answer: Element 1, the destination input, which is currently empty.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the observed departure value 'Sat, Oct 18' name the date the goal requests, 2026-10-20?
+Answer: No, it names a different date.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Does the origin input already hold the value the goal names as the starting point?
+Answer: Yes, it holds Zürich, the requested origin.
+
+Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.
+Is the trip type control already in the state the goal requires?
+Answer: Yes, 'One way' is the selected trip type.
