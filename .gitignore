@@ -5,6 +5,7 @@
 semif/
 edge0/
 offload_projects/
+vendor/
 
 # The SemIf patch itself IS published, as a diff plus the complete files, under
 # patch/. That is deliberate: semif/ is a clone of TheoLeeCJ/SemIf, and pushing it
