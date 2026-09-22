@@ -1,0 +1,2 @@
+{"note":"device read deltas from /sys/block stat sectors*512 (whole device); proc deltas from /proc/self/io read_bytes (this shell + reaped children). inference = workload - load-only baseline."}
+--- ubatch=512 (prompt 2048) ---

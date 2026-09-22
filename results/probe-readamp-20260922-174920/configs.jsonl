@@ -1,0 +1,10 @@
+{"note":"device read deltas from /sys/block stat sectors*512 (whole device); proc deltas from /proc/self/io read_bytes (this shell + reaped children). inference = workload - load-only baseline."}
+--- ubatch=512 (prompt 2048) ---
+{"config": {"ubatch": 512, "prompt_tokens": 2048, "ubatches_per_pass": 4.0, "prefill_tok_s": 29.09, "prefill_seconds": 70.41, "gen_tok_s": null, "load_read_gb_proc": 23.6, "load_read_gb_dev": 23.6, "workload_read_gb_proc": 158.68, "workload_read_gb_dev": 158.68, "inference_read_gb_dev": 135.08, "inference_read_gb_proc": 135.08, "mb_read_per_prefill_token": 66.0, "effective_gb_s": 1.92, "memory_peak_gib": 8.0, "memory_events_max": 123656, "memory_peak_gib_baseline": 8.0}}
+# ub=512 load=23.60GB inference=135.08GB peak=8.00GiB max_events=123656
+--- ubatch=1024 (prompt 2048) ---
+{"config": {"ubatch": 1024, "prompt_tokens": 2048, "ubatches_per_pass": 2.0, "prefill_tok_s": 55.3, "prefill_seconds": 37.03, "gen_tok_s": null, "load_read_gb_proc": 23.6, "load_read_gb_dev": 23.6, "workload_read_gb_proc": 95.67, "workload_read_gb_dev": 95.67, "inference_read_gb_dev": 72.06, "inference_read_gb_proc": 72.06, "mb_read_per_prefill_token": 35.2, "effective_gb_s": 1.95, "memory_peak_gib": 8.0, "memory_events_max": 195208, "memory_peak_gib_baseline": 8.0}}
+# ub=1024 load=23.60GB inference=72.06GB peak=8.00GiB max_events=195208
+--- ubatch=2048 (prompt 2048) ---
+{"config": {"ubatch": 2048, "prompt_tokens": 2048, "ubatches_per_pass": 1.0, "prefill_tok_s": 101.59, "prefill_seconds": 20.16, "gen_tok_s": null, "load_read_gb_proc": 23.6, "load_read_gb_dev": 23.6, "workload_read_gb_proc": 61.41, "workload_read_gb_dev": 61.41, "inference_read_gb_dev": 37.81, "inference_read_gb_proc": 37.81, "mb_read_per_prefill_token": 18.5, "effective_gb_s": 1.88, "memory_peak_gib": 8.0, "memory_events_max": 236558, "memory_peak_gib_baseline": 8.0}}
+# ub=2048 load=23.60GB inference=37.81GB peak=8.00GiB max_events=236558
