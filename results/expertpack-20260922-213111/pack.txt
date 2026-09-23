@@ -1,0 +1,12 @@
+pack        /home/scribe/models/jev-pack/qwen3.6-35b-a3b-expertpack.bin  (18333319168 B)
+geometry    40 layers x 256 experts, 2 geometries
+  from blk.0: stride 1769472 B (108 x 16384)
+  from blk.34: stride 2048000 B (125 x 16384)
+  from blk.35: stride 1769472 B (108 x 16384)
+  from blk.38: stride 2048000 B (125 x 16384)
+
+routed set  8 experts x 40 layers = 546.4 MiB payload per set, 4 set(s)
+
+expert pack, buffered pread, 1 request per expert
+  requests     1280   payload    2185.5 MiB   wall   1.579 s     1384.2 MiB/s
+  device read    2240.8 MiB (1.03x payload)  amplification

@@ -1,0 +1,23 @@
+pack        /home/scribe/models/jev-pack/qwen3.6-35b-a3b-expertpack.bin  (18333319168 B)
+geometry    40 layers x 256 experts, 2 geometries
+  from blk.0: stride 1769472 B (108 x 16384)
+  from blk.34: stride 2048000 B (125 x 16384)
+  from blk.35: stride 1769472 B (108 x 16384)
+  from blk.38: stride 2048000 B (125 x 16384)
+
+O_DIRECT feasibility (offset+len+buffer must all be block-aligned)
+  source   O_DIRECT: 0/3 ok, 3 failed  (errno 22 Invalid argument; first at offset 1147376096 = 480 mod 4096)
+  pack     O_DIRECT: 3/3 ok, 0 failed
+
+  note: a single-expert read from the source is 3 separate
+        preads into regions ~305 MB apart, not one extent.
+
+routed set  8 experts x 40 layers = 546.4 MiB payload per set, 4 set(s)
+
+source GGUF, buffered pread, 3 requests per expert
+  requests     3840   payload    2184.8 MiB   wall   3.741 s      584.0 MiB/s
+  device read    2655.2 MiB (1.22x payload)  amplification
+
+expert pack, buffered pread, 1 request per expert
+  requests     1280   payload    2185.5 MiB   wall   1.660 s     1316.8 MiB/s
+  device read    2240.8 MiB (1.03x payload)  amplification

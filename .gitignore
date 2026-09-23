@@ -30,6 +30,10 @@ pytest-of-scribe/
 .pytest_cache/
 *.log
 
+# Compiled probe binaries. The sources next to them are the artifact; these are
+# rebuilt by their runners (`cc -O2 -o ...`).
+scripts/io/bench_expert_pack
+
 # Results that were measured wrong and deliberately discarded. Kept out of the
 # repo because a file named INVALID-*.jsonl is a trap for a reader who greps for
 # results/ and does not notice the prefix. The findings they produced are recorded

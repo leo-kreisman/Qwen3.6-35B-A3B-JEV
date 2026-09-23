@@ -99,6 +99,7 @@ def parse(path: Path):
             tensors.append({
                 "name": name, "qtype": qtype, "type": TYPE_NAMES[qtype],
                 "elements": elements, "bytes": blocks * per_block, "offset": offset,
+                "dims": dims,
             })
         data_start = handle.tell()
         data_start += (-data_start) % alignment

@@ -1,0 +1,13 @@
+  [source] source GGUF, buffered pread, 3 requests per expert
+  [source]   requests     3840   payload    2184.8 MiB   wall   3.533 s      618.5 MiB/s
+  [source]   device read    2655.2 MiB (1.22x payload)  amplification
+
+  [pack]   requests     1280   payload    2185.5 MiB   wall   1.579 s     1384.2 MiB/s
+  [pack]   device read    2240.8 MiB (1.03x payload)  amplification
+
+  [pack-uring]   requests     1280   payload    2185.5 MiB   wall   0.648 s     3373.3 MiB/s
+  [pack-uring]   device read    2185.5 MiB (1.00x payload)  amplification
+
+  [source-uring]   3840/3840 requests have a non-4096-aligned offset or length
+  [source-uring]   requests     3840   ok        0   errors   3840   wall   0.002 s
+
