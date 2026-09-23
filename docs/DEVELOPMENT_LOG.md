@@ -767,3 +767,176 @@ expensive case and 16 s is the *cheap* end.
 6. **Source build of `llama-cpp-python` in flight.** venv created with
    `uv venv --python 3.11`, which resolved to **3.11.0rc1** (the only other local
    interpreter is stable 3.10.12). If the extension misbehaves, rebuild on 3.10.12.
+
+---
+
+## Session Handoff — 2026-09-22 (e) — the expert pack, the Courgette correction, and what "canonical form" is actually called
+
+### Goal
+
+Started from a reframe by the user: **"the real target is best approach = fastest one, period"**,
+for code generation against coding agents (OpenCode), with **best quality and best speed** both
+holding. Then a narrower question, which turned out to be the productive one: **is this a matter
+of bandwidth/traffic?** — and, after `O_DIRECT`, `io_uring` and the entropy floor were all
+exhausted, **"find a solution in another field that was desperately in need and solved it"**, and
+finally **"people passed through similar problems in another field — research it."**
+
+### Failed Paths
+
+1. **"Compress it smaller" — dead, and measured dead.** Per-substream entropy on the 4-bit
+   payload of all 120 expert tensors: **6.96 of 8 bits/byte**, payload 96.3% of raw (1.04×);
+   fp16 `d`/`dmin` 78.6% (1.27×); metadata is 11.1% of the file and compresses to 73.5%.
+   Generic compression of the whole file tops out at **1.26× (zstd, measured)** against an
+   entropy floor of **1.149×** on the 88.9% payload. Three independent fields agree: VLDB's
+   single-digit-percent gains on high-entropy float data, CERN ROOT's "effectively
+   incompressible" for entropy-coded arrays, and our own numbers.
+
+2. **`O_DIRECT` on the source GGUF — impossible, not merely slow.** All 120 routed-expert
+   tensors sit at offsets that are **480 mod 4096** (`data_start = 10,990,048`, header
+   alignment 32), so no expert tensor is block-aligned. Measured: **3840/3840 requests EINVAL**,
+   single-probe 0/3 ok. This invalidates the *availability* of `LOSSLESS-OPTIONS.md` lever 1
+   (the 3,384 vs 1,658 MiB/s figure) on the unmodified file. Not a regression — a pre-existing
+   property nobody had tested.
+
+3. **"Courgette is the answer" — retracted.** Presented as the field that solved "your exact
+   problem," on the strength of a shared *premise*. Its *mechanism* has no operand here. Full
+   account in §"The Courgette correction" below; this is the most instructive failure of the
+   session and it is a reasoning failure, not an engineering one.
+
+4. **`SEMIF_LLAMA_LOAD_MODE=direct_io`** — OOM-killed (exit -9), loads 19,914 MiB into RAM.
+   Already recorded; repeated here because it is the same confusion as (2): whole-file
+   `O_DIRECT` is a *load* mode, and per-expert `O_DIRECT` is a different thing entirely.
+
+### Final Solution
+
+**1. The expert pack, built and verified lossless — `scripts/io/repack_experts.py`.**
+One contiguous, 16 KiB-aligned slab per (layer, expert): `gate_row || up_row || down_row`.
+Bytes copied verbatim; no dequantisation, no requantisation, no reordering within a row.
+Layout follows `docs/ASSEMBLED-DESIGN.md` §1 (five prior-art engines converge on 16 KiB
+alignment and a sidecar manifest); the **1,769,472 B stride** for 37 of 40 layers is exactly
+qwen-fieldfare's Q4EXP02 number, derived here independently from the dimensions.
+
+**2. The checkpoint is not stride-uniform, which the prior art did not anticipate.**
+117 of 120 expert tensors are Q4_K with a 589,824 B row, but **`blk.34/38/39.ffn_down_exps` are
+Q6_K with an 860,160 B row.** An early version asserted a uniform stride and **failed loudly on
+blk.34** — that assertion is how the outlier was found, so it is kept as a per-layer check and
+the header carries an explicit per-layer table instead of a global stride.
+
+**3. Losslessness checked, not argued.** `--verify`: 300 random slabs, **900 components
+byte-identical to source** by `pread`, any difference reported with its byte offset; the header
+is parsed back and its strides and bases cross-checked, so the format has exactly one reader.
+
+**4. Measured — `scripts/io/bench_expert_pack.{c,sh}`.** 8 experts × 40 layers × 4 passes
+(1,280 experts ≈ 2,185 MiB payload). Page cache evicted before *every* arm (verified
+`cached before: 0 bytes`), each arm in its own process, device reads from `/proc/self/io`:
+
+| arm | requests | device read | wall | MiB/s |
+|---|---|---|---|---|
+| source GGUF, buffered pread | 3,840 | 2,655.2 MiB (1.22×) | 3.533 s | 618.5 |
+| pack, buffered pread | **1,280** | 2,240.8 MiB (1.03×) | 1.579 s | 1,384.2 |
+| pack, io_uring + `O_DIRECT` qd8 | **1,280** | 2,185.5 MiB (**1.00×**) | **0.648 s** | **3,373.3** |
+| source GGUF, io_uring + `O_DIRECT` | 3,840 | — | — | **3840/3840 EINVAL** |
+
+`3.0× fewer requests · amplification 1.22× → 1.00× · 5.45× read rate`, reproducing across two
+runs within 1%.
+
+**5. The honest scope, stated before the number.** The 5.45× is **two stacked effects**: the
+pack removes the scatter (3 requests → 1, +2.2× on the buffered row) and alignment makes
+`O_DIRECT` possible at all (+2.4×). The **byte reduction is not a clean gain** — the ~1.22×
+amplification on the source is load-bearing read-ahead (`MADV_RANDOM` cut reads 42.0 → 26.0 GB
+and cost 56.0 → 368.0 s). And **this is the I/O path only**: compute is 0.088–0.094 s/token
+regardless of layout, so the decode ceiling stays **~11.4 tok/s**, and routed experts are only
+**22.1%** of per-token traffic.
+
+**6. `llama.cpp` cannot read the pack yet — and that is the real blocker.** GGUF's addressable
+unit is the *tensor*, not a slice inside one. Route A: split each expert tensor into one tensor
+per expert (3 × 256 × 40 = **30,720 entries**) — legal GGUF, but the graph must select among
+them: a model-architecture change. Route B: packed layout + this header, custom loader;
+BigMoeOnEdge already does its own `O_DIRECT` reads and is the natural host. Route C (simplest,
+untested): pack as **staging** — prefetch routed sets into a slot pool while the graph keeps
+reading ordinary GGUF tensors, so the pack fixes the read side with **no graph change**.
+**No end-to-end tok/s number has moved.**
+
+### The Courgette correction
+
+Asked **"so you can make Courgette work"**, after having called Courgette "the field that solved
+your exact problem." The answer had to be *partly, and not the part you are picturing*. Verbatim,
+preserved because the reasoning is the useful part:
+
+> **1. There are no pointers to symbolify. This one is fatal.**
+>
+> Courgette's entire mechanism is: find the absolute addresses inside the bytes, replace them
+> with indexes into a symbol table, re-encode. That requires bytes that *are* addresses. Its own
+> description says exactly that — it "detects instructions that use absolute addresses given by
+> the binary file's relocation table, and relative addresses used in relative branches," and the
+> diagnosis was "roughly half a million" internal pointers in chrome.dll.
+>
+> A Q4_K block is: one fp16 scale, then packed 6-bit scales and minimums, then 4-bit nibbles.
+> There is no address, no relocation, no cross-reference, nothing that means "the bytes at
+> offset N." The transformation isn't hard to apply to this data — it's **undefined** on it.
+> There's no operand.
+>
+> And the format level already did the part that does apply: a GGUF header is a table of tensor
+> *names* → *offsets*. That's the symbol table. Names are symbolic, offsets concrete, and the
+> loader resolves between them. So the move Courgette invented is present in GGUF by
+> construction, and the bytes underneath have nothing left to symbolify.
+>
+> **2. Courgette needs two versions. We have one.** It is a delta compressor — it makes the
+> *difference* between old and new small, and its economics assume the client already holds the
+> old file (Chrome's installed binary). On the serving path there is no pair: decode re-reads the
+> whole model every token and never reads a patch, so a perfect Courgette producing a 100×
+> smaller patch would change decode speed by **exactly zero**. And if the old version must
+> already be on the machine, it is already resident and nothing needs streaming.
+>
+> **3. Even a faithful port would be aimed at the wrong wall.** Google's bottleneck *was*
+> transfer; that's why 132× mattered. Ours is transfer **and** DRAM bandwidth per token. A
+> layout/delta mechanism — Courgette, COG, the expert pack, any of them — touches the first.
+> Nothing touches the second.
+>
+> **So: Courgette is not blocked, it is inapplicable.** The translatable part was the premise —
+> layout is not logical structure — and that is already spent; it is what the pack is.
+
+**The lesson, recorded because it is repeatable:** a shared *premise* is not a shared
+*mechanism*. I imported a mechanism whose precondition is absent on the strength of a premise
+both cases share, and the analogy carried the claim past the point where the operand disappeared.
+The correct form of the earlier sentence was: **"the idea transfers, the algorithm does not —
+there are no addresses here to symbolify."** Recorded also as a *positive* result: the thing
+Courgette invented (symbolic names → concrete offsets) is **already in GGUF**, which is why
+there was nothing left to do.
+
+### What the general problem is called
+
+The user's question — *"I don't know the terms or technicalities for that, but probably people
+passed through similar problems in another field"* — has an exact answer, and it is a named,
+mature body of work: **canonicalization / canonical form** (also *normalization*, *canonical
+labelling*, *distinguished encoding*). The property Courgette was restoring has its own name:
+**representation independence** — two encodings of the same logical object differing only by
+*addressing* or *ordering*, not by content. Full survey with sources in
+**`docs/CANONICAL-FORM.md`**. The short form: seven independent fields solved exactly this
+(chemistry, genomics, cryptography, graph theory, build systems, distributed filesystems, type
+theory), the mechanism is the same in all of them (a canonical representative chosen by a
+deterministic rule + a cheap comparison), and **GGUF is already a canonicalized container** —
+which is precisely why there is nothing left to symbolize.
+
+### Files this session
+
+- `scripts/io/repack_experts.py` (422 lines) — the file rewrite, `--dry-run/--verify/--group`
+- `scripts/io/bench_expert_pack.c` (567 lines) — 4 arms, raw `io_uring`, `/proc/self/io`
+- `scripts/io/bench_expert_pack.sh` (93 lines) — evict-before-every-arm runner
+- `docs/EXPERT-PACK.md` — the measurement, the defect, and the scope caveats
+- `docs/CANONICAL-FORM.md` — the cross-field survey
+- `scripts/probes/gguf_tensor_layout.py` — now also returns `dims`
+- `results/expertpack-20260922-213111/` — `summary.txt` + 5 arm transcripts + `odirect-check.txt`
+- Pack artifacts at `~/models/jev-pack/` (18.3 GB, gitignored; manifest + source regions tracked
+  only by recipe)
+
+### Open
+
+- **Route A / B / C for the loader — not chosen.** This is the one thing between the pack and an
+  end-to-end number.
+- **The 77.9%.** Always-active tensors (attention/SSM 53.3%, output proj 16.1%, shared FFN 5.2%,
+  router 3.3%) are read **every token unconditionally**; attention/SSM sits at **Q8_0 = 8.5 bpw**
+  while experts sit at 4.5 bpw. This is the untouched half of the fraction, and it is where the
+  46% byte reduction needed for 20 tok/s has to come from.
+- **20+ tok/s: never delivered.** Not blocked by missing code — blocked by the 11.4 tok/s compute
+  ceiling combined with never having attacked the 77.9%.
