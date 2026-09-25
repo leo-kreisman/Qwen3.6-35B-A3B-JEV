@@ -1,0 +1,70 @@
+{
+  "full": {
+    "runs": 1,
+    "median_scoring_seconds": 34.877617863,
+    "median_scoring_read_bytes": 19714187264,
+    "measurements": [
+      {
+        "name": "full-1",
+        "seconds": 34.877617863,
+        "read_bytes": 19714187264,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      }
+    ]
+  },
+  "full-padded": {
+    "runs": 1,
+    "median_scoring_seconds": 33.243134109,
+    "median_scoring_read_bytes": 16663764992,
+    "measurements": [
+      {
+        "name": "full-padded-1",
+        "seconds": 33.243134109,
+        "read_bytes": 16663764992,
+        "peak": 8589934592,
+        "flips": [
+          "holdout-0"
+        ],
+        "max_probability_drift": 0.0887352531986868,
+        "max_logit_drift": 1.0135154724121094
+      }
+    ]
+  },
+  "serial": {
+    "runs": 1,
+    "median_scoring_seconds": 94.690280531,
+    "median_scoring_read_bytes": 120974200832,
+    "measurements": [
+      {
+        "name": "serial-1",
+        "seconds": 94.690280531,
+        "read_bytes": 120974200832,
+        "peak": 8589934592,
+        "flips": [
+          "holdout-0"
+        ],
+        "max_probability_drift": 0.0887352531986868,
+        "max_logit_drift": 1.0135154724121094
+      }
+    ]
+  },
+  "shared-padded": {
+    "runs": 1,
+    "median_scoring_seconds": 29.109673205,
+    "median_scoring_read_bytes": 27908603904,
+    "measurements": [
+      {
+        "name": "shared-padded-1",
+        "seconds": 29.109673205,
+        "read_bytes": 27908603904,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 0.29814183983705034,
+        "max_logit_drift": 1.1793937683105469
+      }
+    ]
+  }
+}

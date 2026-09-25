@@ -1,0 +1,218 @@
+[
+  {
+    "id": "ui-0",
+    "state": "Origin Lisbon; destination Madrid. Goal: Lisbon to Madrid.",
+    "question": "Does the origin match the goal?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "A",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/00.txt",
+    "prompt_sha256": "f4242412141d42499d3ad054c76cd708f0511468fc29e573506308ae19c63606"
+  },
+  {
+    "id": "ui-1",
+    "state": "Origin Lisbon; destination Madrid. Goal: Porto to Madrid.",
+    "question": "Does the origin match the goal?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "B",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/01.txt",
+    "prompt_sha256": "d983f94a3fd3c052d1cd4e0579a752daac56d967fc5490bf110f1deee8fb62a1"
+  },
+  {
+    "id": "ui-2",
+    "state": "Departure 2026-11-04. Goal departure 2026-11-14.",
+    "question": "Is the departure date correct?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "B",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/02.txt",
+    "prompt_sha256": "ef6aa13f849a5bfe25ae9b8fb1fa6e0e42777ca3a91e731a45631daf52e735ac"
+  },
+  {
+    "id": "ui-3",
+    "state": "Departure 2026-11-14. Goal departure 2026-11-14.",
+    "question": "Is the departure date correct?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "A",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/03.txt",
+    "prompt_sha256": "c21fcb6d159f17e7703beeb7a8212b7313621c4e54b09e3842812ee4287aacc9"
+  },
+  {
+    "id": "ui-4",
+    "state": "A return-trip radio button is selected; one-way is not. Goal: a one-way flight.",
+    "question": "Is the trip type correct?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "B",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/04.txt",
+    "prompt_sha256": "97bcc268dc0b75b9beeb3ea128535e42096f0aeb5d0b47bbd450067c70d10ad0"
+  },
+  {
+    "id": "ui-5",
+    "state": "A one-way radio button is selected. Goal: a one-way flight.",
+    "question": "Is the trip type correct?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "A",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/05.txt",
+    "prompt_sha256": "9b1a699a1559c7563192c981ffb831fa66f841a0135484090ba8dd2a6cf26f78"
+  },
+  {
+    "id": "ui-6",
+    "state": "Checkbox Subscribe is unchecked. Goal: do not subscribe.",
+    "question": "Should Subscribe be clicked to achieve the goal?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "B",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/06.txt",
+    "prompt_sha256": "b8a16d10e7c36989b9405e3a21da640a16707505f364a4de0bc05e60881ed59e"
+  },
+  {
+    "id": "ui-7",
+    "state": "Checkbox Subscribe is checked. Goal: do not subscribe.",
+    "question": "Should Subscribe be clicked to achieve the goal?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "A",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/07.txt",
+    "prompt_sha256": "85dc138ae3993b95d3f63d7c5325dca94d8cd483dc69cae894cec27ffa362959"
+  },
+  {
+    "id": "ui-8",
+    "state": "Button Save is disabled. Button Cancel is enabled.",
+    "question": "Can Save currently be activated?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "B",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/08.txt",
+    "prompt_sha256": "4ebd9f7d640d37d8604f16d2fa4951036d6b844e9850270912c224ae2e64aab2"
+  },
+  {
+    "id": "ui-9",
+    "state": "Button Save is enabled. Button Cancel is disabled.",
+    "question": "Can Save currently be activated?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "A",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/09.txt",
+    "prompt_sha256": "c2d8150c7b2f3372fc4c31e1bebcd9539972e40539aa7d3e901247ec920543a9"
+  },
+  {
+    "id": "ui-10",
+    "state": "The destination field contains Paris, not London. The goal is to travel to London.",
+    "question": "Does the destination match the goal?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "B",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/10.txt",
+    "prompt_sha256": "eba80479c51ac7cde427dedd3ea929c3a9bc41acbaaeba9519dadf4e69b973cf"
+  },
+  {
+    "id": "ui-11",
+    "state": "The destination field contains London. A nearby advertisement mentions Paris. Goal: London.",
+    "question": "Does the destination match the goal?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes."
+      },
+      {
+        "id": "no",
+        "description": "No."
+      }
+    ],
+    "expected": "A",
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/11.txt",
+    "prompt_sha256": "9c8e4dbe079acae6c065e32c6c0e982c95b5d721249eeaee8b701feb06801dba"
+  }
+]

@@ -1,0 +1,9 @@
+<|im_start|>system
+Classify the support ticket. Reply with exactly one letter: A billing, B technical, C account, D fraud, E general.<|im_end|>
+<|im_start|>user
+When does your support desk open?<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

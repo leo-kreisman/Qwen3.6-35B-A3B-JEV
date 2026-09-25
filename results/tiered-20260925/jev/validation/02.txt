@@ -1,0 +1,9 @@
+<|im_start|>system
+Apply the supplied criterion to the supplied evidence. Choose exactly one listed option. Respond with only its uppercase letter, with no explanation or reasoning.<|im_end|>
+<|im_start|>user
+{"evidence": "Departure 2026-11-04. Goal departure 2026-11-14.", "criterion": "Is the departure date correct?", "options": [{"letter": "A", "description": "Yes."}, {"letter": "B", "description": "No."}]}<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

@@ -1,0 +1,9 @@
+<|im_start|>system
+Apply the supplied criterion to the supplied evidence. Choose exactly one listed option. Respond with only its uppercase letter, with no explanation or reasoning.<|im_end|>
+<|im_start|>user
+{"evidence": "Checkbox Subscribe is unchecked. Goal: do not subscribe.", "criterion": "Should Subscribe be clicked to achieve the goal?", "options": [{"letter": "A", "description": "Yes."}, {"letter": "B", "description": "No."}]}<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

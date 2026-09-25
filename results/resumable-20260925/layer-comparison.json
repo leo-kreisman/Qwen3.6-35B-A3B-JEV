@@ -1,0 +1,78 @@
+{
+  "separate-original": {
+    "max_abs_error": 0.0,
+    "relative_l2_error": 0.0,
+    "finite": true,
+    "measurement": {
+      "schedule": "separate",
+      "representation": "original",
+      "seconds": 2.6886176519910805,
+      "logical_read_bytes": 962592768,
+      "read_calls": 1632,
+      "decoded_weight_bytes_peak": 12582912,
+      "direct_read_bytes": 969277440,
+      "io_buffer_bytes": 593920,
+      "input_bytes": 7467392,
+      "output_bytes": 59506688,
+      "rows": 908,
+      "note": "one routed layer; float32 dequantized reference; no gate-weighted merge or end-to-end speed claim"
+    }
+  },
+  "grouped-original": {
+    "max_abs_error": 7.450580596923828e-08,
+    "relative_l2_error": 1.232335312039645e-07,
+    "finite": true,
+    "measurement": {
+      "schedule": "grouped",
+      "representation": "original",
+      "seconds": 1.441125354001997,
+      "logical_read_bytes": 445906944,
+      "read_calls": 756,
+      "decoded_weight_bytes_peak": 12582912,
+      "direct_read_bytes": 449003520,
+      "io_buffer_bytes": 593920,
+      "input_bytes": 7467392,
+      "output_bytes": 59506688,
+      "rows": 908,
+      "note": "one routed layer; float32 dequantized reference; no gate-weighted merge or end-to-end speed claim"
+    }
+  },
+  "separate-tiles": {
+    "max_abs_error": 4.470348358154297e-08,
+    "relative_l2_error": 7.731175731554463e-08,
+    "finite": true,
+    "measurement": {
+      "schedule": "separate",
+      "representation": "tiles",
+      "seconds": 2.9487666920176707,
+      "logical_read_bytes": 962592768,
+      "read_calls": 1088,
+      "decoded_weight_bytes_peak": 6291456,
+      "direct_read_bytes": 962592768,
+      "io_buffer_bytes": 884736,
+      "input_bytes": 7467392,
+      "output_bytes": 59506688,
+      "rows": 908,
+      "note": "one routed layer; float32 dequantized reference; no gate-weighted merge or end-to-end speed claim"
+    }
+  },
+  "grouped-tiles": {
+    "max_abs_error": 8.940696716308594e-08,
+    "relative_l2_error": 1.4204613036591836e-07,
+    "finite": true,
+    "measurement": {
+      "schedule": "grouped",
+      "representation": "tiles",
+      "seconds": 0.9848193269863259,
+      "logical_read_bytes": 445906944,
+      "read_calls": 504,
+      "decoded_weight_bytes_peak": 6291456,
+      "direct_read_bytes": 445906944,
+      "io_buffer_bytes": 884736,
+      "input_bytes": 7467392,
+      "output_bytes": 59506688,
+      "rows": 908,
+      "note": "one routed layer; float32 dequantized reference; no gate-weighted merge or end-to-end speed claim"
+    }
+  }
+}

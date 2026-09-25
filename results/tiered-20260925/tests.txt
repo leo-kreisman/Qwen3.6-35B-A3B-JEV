@@ -1,0 +1,16 @@
+test_bad_lengths_and_codebook (test_codec.CodecTests) ... ok
+test_hot_profile_and_missing_layer_rejected (test_codec.CodecTests) ... ok
+test_independent_decode_and_metadata (test_codec.CodecTests) ... ok
+test_native_reader_and_rejection (test_reader.ReaderTests) ... bmoe: LOSSY tiered storage ON: 1 cold Q4_K slices; expanded cache unchanged
+tiered reader gate passed
+bmoe: tiered pack: invalid header or model size mismatch
+bmoe: tiered pack: invalid header or model size mismatch
+bmoe: tiered pack: invalid or incompatible extent table
+bmoe: tiered pack: invalid or incompatible extent table
+bmoe: tiered pack: source fingerprint mismatch
+ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.968s
+
+OK

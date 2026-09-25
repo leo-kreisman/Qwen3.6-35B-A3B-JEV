@@ -1,0 +1,30 @@
+{
+  "command": [
+    "results/resumable-20260925/probe",
+    "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+    "results/resumable-20260925/input.json",
+    "results/resumable-20260925/full-padded-trace",
+    "full-padded",
+    "0",
+    "6"
+  ],
+  "wall_seconds": 51.22732340800576,
+  "exit_code": 0,
+  "process_tree_read_bytes": 38465413120,
+  "memory_max": 8589934592,
+  "memory_peak": 8589934592,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 17108,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": [
+    {
+      "path": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+      "cached_bytes": 0
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "flips": [
+    "holdout-0"
+  ],
+  "max_probability_drift": 0.13379842250669466,
+  "max_logit_drift": 1.3781814575195312
+}

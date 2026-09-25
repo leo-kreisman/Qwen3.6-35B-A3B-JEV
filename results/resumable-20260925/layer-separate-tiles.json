@@ -1,0 +1,14 @@
+{
+  "schedule": "separate",
+  "representation": "tiles",
+  "seconds": 2.9487666920176707,
+  "logical_read_bytes": 962592768,
+  "read_calls": 1088,
+  "decoded_weight_bytes_peak": 6291456,
+  "direct_read_bytes": 962592768,
+  "io_buffer_bytes": 884736,
+  "input_bytes": 7467392,
+  "output_bytes": 59506688,
+  "rows": 908,
+  "note": "one routed layer; float32 dequantized reference; no gate-weighted merge or end-to-end speed claim"
+}

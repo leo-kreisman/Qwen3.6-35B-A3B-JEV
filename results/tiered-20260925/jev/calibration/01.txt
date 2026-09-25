@@ -1,0 +1,9 @@
+<|im_start|>system
+Apply the supplied criterion to the supplied evidence. Choose exactly one listed option. Respond with only its uppercase letter, with no explanation or reasoning.<|im_end|>
+<|im_start|>user
+{"evidence": "Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.", "criterion": "Does the observed departure value 'Sat, Oct 18' name the date the goal requests, 2026-10-20?", "options": [{"letter": "A", "description": "Yes, 'Sat, Oct 18' is the requested date."}, {"letter": "B", "description": "No, it names a different date."}]}<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

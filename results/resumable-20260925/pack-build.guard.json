@@ -1,0 +1,29 @@
+{
+  "command": [
+    "semif/.venv/bin/python",
+    "scripts/resumable/tiles.py",
+    "build",
+    "--model",
+    "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+    "--layer",
+    "0",
+    "--tile",
+    "256",
+    "--output",
+    "results/resumable-20260925/pack"
+  ],
+  "wall_seconds": 3.8772721249843016,
+  "exit_code": 0,
+  "process_tree_read_bytes": 464986112,
+  "memory_max": 8589934592,
+  "memory_peak": 958427136,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": []
+}

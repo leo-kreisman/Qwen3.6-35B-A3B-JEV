@@ -1,0 +1,570 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 41b557a..4211efb 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -4,6 +4,15 @@ All notable changes to this project are documented here. The format follows
+ [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
+ Semantic Versioning.
+ 
++## Local experiment - 2026-09-25 (not released)
++
++- Added opt-in `--tiered-pack` cold Q4_K storage with bounded lane buffers,
++  source/geometry checks and scalar/SSSE3 expansion. Lossy; expanded cache size
++  is unchanged. See `docs/tiered-storage.md`.
++- Added `--choices-only` for final single-token labels from rendered prompts,
++  including per-question time and physical expert read bytes. Existing defaults
++  and ordinary perplexity behavior remain unchanged.
++
+ ## [0.24.0] - 2026-09-07
+ 
+ ### Added
+diff --git a/README.md b/README.md
+index d57155a..61544be 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,6 @@
++Local JEV experiment: [tiered storage](docs/tiered-storage.md) is opt-in and lossy.
++It is not part of the published baseline or a recommended default.
++
+ <p align="center">
+   <picture>
+     <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo/horizontal-ink.svg">
+diff --git a/cli/main.cpp b/cli/main.cpp
+index ea3c2b7..5e6c59e 100644
+--- a/cli/main.cpp
++++ b/cli/main.cpp
+@@ -443,6 +443,7 @@ static void print_usage(const char * argv0) {
+         "      --cache-mb N|auto   LRU expert cache budget in MiB (0=off, or >=%d); auto=size to device\n"
+         "                          (default: auto whenever --moe-stream is on)\n"
+         "      --cache-floor-mb N  with --cache-mb auto: RAM to leave free (default 1536)\n"
++        "      --tiered-pack PATH experimental LOSSY cold-expert storage sidecar (Q4_K only)\n"
+         "      --cache-ceil-mb N   with --cache-mb auto: upper bound on the budget (0 = no cap)\n"
+         "      --io-threads N      parallel expert-read lanes [1..%d] (default 4)\n"
+         "      --no-odirect        do not bypass the page cache for expert reads\n"
+@@ -486,6 +487,7 @@ static void print_usage(const char * argv0) {
+         "                          Runs the same NUMBER of experts, fewer of which cost a read.\n"
+         "                          L in [0, 1]; 0 is off. Needs the LRU cache. Measured best: 0.15\n"
+         "      --ppl FILE          measure teacher-forced perplexity of FILE instead of generating.\n"
++        "      --choices-only      score only final answer labels in a pre-rendered chat prompt\n"
+         "                          Every cell scores the SAME fixed token sequence, so the number is\n"
+         "                          a scale: comparing GENERATED text cannot price a lossy setting,\n"
+         "                          because greedy output only moves when a perturbation happens to\n"
+@@ -592,6 +594,7 @@ int main(int argc, char ** argv) {
+     std::string ppl_path;
+     int ppl_skip = 8;
+     bool ppl_step = false;
++    bool choices_only = false;
+     std::string ppl_list;                 // --ppl-list: one text path per line, scored in one session
+     std::vector<std::string> ppl_choices; // --ppl-choices: strings whose first-token log-prob is reported
+     std::string compute_trace_path;
+@@ -681,6 +684,8 @@ int main(int argc, char ** argv) {
+             cfg.moe.cache_floor_mb = std::atoi(next("--cache-floor-mb"));
+         else if (a == "--cache-ceil-mb")
+             cfg.moe.cache_ceil_mb = std::atoi(next("--cache-ceil-mb"));
++        else if (a == "--tiered-pack")
++            cfg.moe.tiered_pack = next("--tiered-pack");
+         else if (a == "--io-threads")
+             cfg.moe.io_threads = std::atoi(next("--io-threads"));
+         else if (a == "--no-odirect")
+@@ -728,6 +733,8 @@ int main(int argc, char ** argv) {
+             cfg.moe.drop_cold_frac = (float) std::atof(next("--drop-cold-experts"));
+         else if (a == "--expert-substitute")
+             cfg.moe.substitute_lambda = (float) std::atof(next("--expert-substitute"));
++        else if (a == "--choices-only")
++            choices_only = true;
+         else if (a == "--ppl")
+             ppl_path = next("--ppl");
+         else if (a == "--ppl-skip")
+@@ -807,6 +814,10 @@ int main(int argc, char ** argv) {
+         return 1;
+     }
+ 
++    if (choices_only && (ppl_choices.empty() || (ppl_path.empty() && ppl_list.empty()) || ppl_step || session_mode)) {
++        std::fprintf(stderr,"choices-only requires --ppl[-list] and --ppl-choices; excludes --ppl-step/--session\n");
++        return 2;
++    }
+     ValidationResult vr = validate(cfg);
+     if (!vr) {
+         std::fprintf(stderr, "config error: %s\n", vr.error.c_str());
+@@ -896,19 +907,23 @@ int main(int argc, char ** argv) {
+             pr.skip = ppl_skip;
+             pr.step = ppl_step;
+             pr.choices = ppl_choices;
++            pr.choices_only = choices_only;
++            if (choices_only) pr.as_decode = false;
+             const PplResult pres = session->perplexity(pr);
+             if (!pres.ok) {
+                 std::fprintf(stderr, "bmoe: perplexity failed on '%s': %s\n", path.c_str(), pres.error.c_str());
+                 return 1;
+             }
+             if (paths.size() > 1) std::printf("ppl-file: %s\n", path.c_str());
+-            std::printf("ppl: %.4f  nll: %.5f  next-token hits: %d/%d (%.1f%%)  %.2f s\n", pres.ppl, pres.nll,
++            if (choices_only) std::printf("choices-only: %d input tokens, %.4f s, %llu expert read bytes\n",
++                                         pres.n_tokens,pres.seconds,(unsigned long long)pres.expert_read_bytes);
++            else std::printf("ppl: %.4f  nll: %.5f  next-token hits: %d/%d (%.1f%%)  %.2f s\n", pres.ppl, pres.nll,
+                         pres.n_top1, pres.n_scored, pres.n_scored > 0 ? 100.0 * pres.n_top1 / pres.n_scored : 0.0,
+                         pres.seconds);
+             if (!pres.choice_logp.empty()) {
+                 std::printf("ppl-choices:");
+                 for (size_t k = 0; k < pres.choice_logp.size(); ++k)
+-                    std::printf(" %s=%.4f", ppl_choices[k].c_str(), pres.choice_logp[k]);
++                    std::printf(choices_only ? " %s=%.17g" : " %s=%.4f", ppl_choices[k].c_str(), pres.choice_logp[k]);
+                 std::printf("\n");
+             }
+             // Say what the policy did, always. A lossy flag that touched nothing scored the
+diff --git a/core/CMakeLists.txt b/core/CMakeLists.txt
+index 8d37f72..8f4e9c3 100644
+--- a/core/CMakeLists.txt
++++ b/core/CMakeLists.txt
+@@ -28,6 +28,7 @@ if(BMOE_HAVE_LLAMA)
+         src/moe/row_stream.cpp
+         src/moe/gguf_offsets.cpp
+         src/moe/expert_stream_source.cpp
++        src/moe/tiered_reader.cpp
+         src/moe/router_hook.cpp
+         src/engine/session.cpp
+         src/engine/chat_parse.cpp
+diff --git a/core/include/bmoe/config.h b/core/include/bmoe/config.h
+index fbed9b6..d0274bd 100644
+--- a/core/include/bmoe/config.h
++++ b/core/include/bmoe/config.h
+@@ -39,6 +39,7 @@ enum class DenseWeightsMode {
+ // MoE expert-selective streaming knobs.
+ struct MoeStreamConfig {
+     bool enabled = false; // turn streaming on; init fails fast if the model is not MoE
++    std::string tiered_pack; // Experimental lossy Q4_K storage sidecar; empty keeps original bytes.
+ 
+     // LRU expert cache budget, in MiB. 0 disables the cache (experts are re-read from
+     // flash every token via three shared slots). Measured pathology: a budget below one
+diff --git a/core/include/bmoe/session.h b/core/include/bmoe/session.h
+index 1587d80..b2f7b1f 100644
+--- a/core/include/bmoe/session.h
++++ b/core/include/bmoe/session.h
+@@ -104,6 +104,7 @@ struct GenerateRequest {
+ // argmax boundary, and whether it does is unrelated to how large the perturbation was.
+ struct PplResult {
+     bool ok = false;
++    uint64_t expert_read_bytes = 0;
+     std::string error;
+     double nll = 0.0; // mean negative log-likelihood per scored token, in nats
+     double ppl = 0.0; // exp(nll)
+@@ -130,6 +131,8 @@ struct PplResult {
+ 
+ struct PplRequest {
+     std::string text;
++    // Score a pre-rendered chat prompt at its last position only. No text perplexity.
++    bool choices_only = false;
+     // Tokens at the start of the text whose prediction is made from too little context to be
+     // informative. They are evaluated (the KV needs them) but not scored.
+     int skip = 8;
+diff --git a/core/src/config.cpp b/core/src/config.cpp
+index 53f355b..f205a85 100644
+--- a/core/src/config.cpp
++++ b/core/src/config.cpp
+@@ -15,6 +15,9 @@ ValidationResult validate(const RunConfig & cfg) {
+     if (cfg.model_path.empty()) {
+         return fail("model_path is required");
+     }
++    if (!cfg.moe.tiered_pack.empty() && !cfg.moe.enabled) {
++        return fail("tiered storage requires --moe-stream");
++    }
+     if (cfg.n_predict <= 0) {
+         return fail("n_predict must be positive");
+     }
+diff --git a/core/src/engine/session.cpp b/core/src/engine/session.cpp
+index f484ca9..3cee2a8 100644
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -406,15 +406,20 @@ PplResult Session::perplexity(const PplRequest & req) {
+     auto & im = *impl_;
+     PplResult r;
+     const auto t0 = clock_t_::now();
++    const uint64_t read0 = im.cfg.moe.enabled ? im.source.stats().read_bytes : 0;
+     llama_context * ctx = im.ctx.get();
++    if (req.choices_only && (req.choices.empty() || req.step)) {
++        r.error = "choices-only requires choices and excludes token-by-token perplexity";
++        return r;
++    }
+ 
+     std::vector<llama_token> tokens(req.text.size() + 8);
+     int n = llama_tokenize(im.vocab, req.text.c_str(), (int) req.text.size(), tokens.data(), (int) tokens.size(),
+-                           /*add_special*/ true, /*parse_special*/ false);
++                           /*add_special*/ !req.choices_only, /*parse_special*/ req.choices_only);
+     if (n < 0) {
+         tokens.resize(-n);
+-        n = llama_tokenize(im.vocab, req.text.c_str(), (int) req.text.size(), tokens.data(), (int) tokens.size(), true,
+-                           false);
++        n = llama_tokenize(im.vocab, req.text.c_str(), (int) req.text.size(), tokens.data(), (int) tokens.size(),
++                           !req.choices_only, req.choices_only);
+     }
+     if (n < 2) {
+         r.error = "text too short to score";
+@@ -511,7 +516,7 @@ PplResult Session::perplexity(const PplRequest & req) {
+     } else {
+         for (int i = 0; i < n; i += im.cfg.n_batch) {
+             const int chunk = std::min(im.cfg.n_batch, n - i);
+-            batch_fill(b, tokens.data() + i, chunk, /*pos0*/ i, /*all_logits*/ true);
++            batch_fill(b, tokens.data() + i, chunk, /*pos0*/ i, /*all_logits*/ !req.choices_only);
+             im.hook->set_batch_phase(req.as_decode ? 1 : 0);
+             if (llama_decode(ctx, b) != 0) {
+                 r.error = "decode failed at position " + std::to_string(i);
+@@ -521,7 +526,7 @@ PplResult Session::perplexity(const PplRequest & req) {
+             // and the last row of a chunk predicts the first token of the next one.
+             for (int j = 0; j < chunk; ++j) {
+                 const int pos = i + j;
+-                if (pos + 1 >= n || pos < req.skip) continue;
++                if (req.choices_only || pos + 1 >= n || pos < req.skip) continue;
+                 if (!score(j, pos)) return r;
+             }
+             last_row = chunk - 1;
+@@ -543,7 +548,7 @@ PplResult Session::perplexity(const PplRequest & req) {
+         for (const std::string & c : req.choices) {
+             llama_token ct[8];
+             const int nc = llama_tokenize(im.vocab, c.c_str(), (int) c.size(), ct, 8, false, false);
+-            if (nc < 1) {
++            if (nc < 1 || (req.choices_only && nc != 1)) {
+                 r.error = "choice '" + c + "' does not tokenize";
+                 return r;
+             }
+@@ -563,6 +568,7 @@ PplResult Session::perplexity(const PplRequest & req) {
+     r.experts_reranked = im.hook->experts_reranked() - reranked0;
+     r.experts_substituted = im.hook->experts_substituted() - substituted0;
+     r.seconds = secs(t0, clock_t_::now());
++    r.expert_read_bytes = im.cfg.moe.enabled ? im.source.stats().read_bytes - read0 : 0;
+     r.ok = true;
+     return r;
+ }
+diff --git a/core/src/moe/expert_stream_source.cpp b/core/src/moe/expert_stream_source.cpp
+index 860acb8..93acbd6 100644
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -77,6 +77,20 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+         return false;
+     }
+ 
++    if (!cfg.tiered_pack.empty()) {
++        if (shard_paths.size() != 1) {
++            std::fprintf(stderr, "bmoe: tiered storage currently requires a single GGUF shard\n");
++            return false;
++        }
++        std::unordered_map<uint64_t, uint64_t> allowed;
++        for (const auto & layer : layers_) for (const auto & p : layer.proj) {
++            if (!p.tensor || p.tensor->type != GGML_TYPE_Q4_K) continue;
++            for (int e=0;e<n_expert_;++e) allowed.emplace(p.file_off+e*p.nb2,p.nb2);
++        }
++        tiered_.reset(new TieredReader());
++        if (!tiered_->open(cfg.tiered_pack,shard_paths[0],io_threads_,cfg.o_direct,allowed)) return false;
++    }
++
+     // Auto budget: size the cache to the device once, now that the full expert-set size is known.
+     // (validate() guarantees cache_mb == 0 here, so this is the sole source of cache_max_ when auto.)
+     // One shot — the floor and the cap decide the budget here and are not kept: nothing re-sizes it
+@@ -210,7 +224,7 @@ bool ExpertStreamSource::init(const std::vector<std::string> & shard_paths,
+     // fully direct, and a metadata-only first shard that never carried an expert read must not
+     // flatter the shards that do. Settled here, before any worker thread exists; stats() reads it
+     // cross-thread for the rest of the run.
+-    effective_direct_ = true;
++    effective_direct_ = !tiered_ || tiered_->direct();
+     for (const auto & r : readers_)
+         effective_direct_ = effective_direct_ && r->direct();
+     for (const LayerExperts & L : layers_) {
+@@ -301,6 +315,7 @@ bool ExpertStreamSource::reopen_readers() {
+     bool ok = true;
+     for (auto & r : readers_)
+         ok = r->reopen() && ok;
++    if (tiered_) ok = tiered_->reopen() && ok;
+     return dense_.reopen_readers() && ok;
+ }
+ 
+@@ -311,7 +326,9 @@ bool ExpertStreamSource::reopen_readers() {
+ bool ExpertStreamSource::read_slice(int lane, const IoJob & j) {
+     if (j.nbytes == 0) return true;
+     const auto t0 = clock_t_::now();
+-    const long long window = readers_[(size_t) j.file]->read(lane, j.dst, j.off, j.nbytes);
++    const long long window = tiered_ && j.file == 0 && tiered_->contains(j.off)
++        ? tiered_->read(lane,j.dst,j.off,j.nbytes)
++        : readers_[(size_t) j.file]->read(lane, j.dst, j.off, j.nbytes);
+     if (window < 0) return false;
+ 
+     if (io_trace_on_) {
+@@ -1384,6 +1401,10 @@ IExpertSource::Stats ExpertStreamSource::stats() const {
+         rd_bytes += r->read_bytes();
+         rd_syscall_ns += r->syscall_ns();
+     }
++    if (tiered_) {
++        rd_bytes += tiered_->read_bytes();
++        rd_syscall_ns += tiered_->syscall_ns();
++    }
+     s.read_bytes = (uint64_t) rd_bytes;
+     // Serial: read_ns_ is the wall time the caller was blocked in the read phase. Overlap: the
+     // caller never blocks, so "I/O time" is instead the summed lane-busy time (the readers' syscall
+@@ -1460,6 +1481,11 @@ void ExpertStreamSource::shutdown() {
+     dense_tensors_.clear();
+     row_tensors_.clear();
+     readers_.clear(); // closes every shard's lane fds and frees the bounces
++    if (tiered_) {
++        std::fprintf(stderr,"bmoe: tiered storage: %.3f MiB read, %.6f lane-seconds expanding\n",
++                     tiered_->read_bytes()/1048576.0,tiered_->expand_ns()/1e9);
++        tiered_.reset();
++    }
+     jobs_.clear();
+     layers_.clear();
+     active_ = false;
+diff --git a/core/src/moe/expert_stream_source.h b/core/src/moe/expert_stream_source.h
+index 5995b7f..21d3685 100644
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -22,6 +22,7 @@
+ #include "../io/platform_io.h"
+ #include "../io/file_reader.h"
+ #include "dense_weights.h" // DenseWeights + DenseTensorRef
++#include "tiered_reader.h"
+ 
+ #include <atomic>
+ #include <condition_variable>
+@@ -136,6 +137,7 @@ public:
+     void shutdown();
+ 
+ private:
++    std::unique_ptr<TieredReader> tiered_;
+     struct IoJob {
+         void * dst = nullptr;
+         uint64_t off = 0;
+diff --git a/core/src/moe/tiered_codec.h b/core/src/moe/tiered_codec.h
+new file mode 100644
+--- /dev/null
++++ b/core/src/moe/tiered_codec.h
+@@ -0,0 +1,88 @@
++#pragma once
++#include <cstddef>
++#include <cstdint>
++#include <cstring>
++#include <array>
++#if defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
++#include <tmmintrin.h>
++#endif
++
++// Q4_K metadata is retained verbatim. Each block chooses one of these nibble
++// codebooks; 256 two-bit indices replace 256 four-bit indices. 81 vs 144 bytes.
++// This is a lossy STORAGE codec, not a native Q2_K arithmetic format.
++namespace jev_tiered {
++inline constexpr uint8_t books[][4] = {
++    {0,5,10,15}, {1,5,9,13}, {2,6,10,14}, {3,6,9,12},
++    {4,6,8,10}, {5,7,9,11}, {6,8,10,12}, {4,7,10,13},
++    {0,3,6,9}, {6,9,12,15}, {0,2,4,6}, {9,11,13,15},
++    {2,5,8,11}, {4,7,10,15}, {0,5,8,11}, {5,8,11,14}
++};
++inline constexpr auto pair_luts = [] {
++    std::array<std::array<uint8_t,16>,16> result{};
++    for(unsigned b=0;b<16;++b) for(unsigned j=0;j<16;++j)
++        result[b][j]=books[b][j&3] | (books[b][j>>2]<<4);
++    return result;
++}();
++#if defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
++__attribute__((target("ssse3"))) inline bool expand_simd(const uint8_t * src, uint8_t * dst, size_t blocks) {
++    const __m128i mask=_mm_set1_epi8(15);
++    for(size_t b=0;b<blocks;++b,src+=81,dst+=144) {
++        if(src[16]>=16) return false;
++        _mm_storeu_si128(reinterpret_cast<__m128i *>(dst),_mm_loadu_si128(reinterpret_cast<const __m128i *>(src)));
++        __m128i lut=_mm_loadu_si128(reinterpret_cast<const __m128i *>(pair_luts[src[16]].data()));
++        for(size_t j=0;j<64;j+=16) {
++            __m128i v=_mm_loadu_si128(reinterpret_cast<const __m128i *>(src+17+j));
++            __m128i lo=_mm_shuffle_epi8(lut,_mm_and_si128(v,mask));
++            __m128i hi=_mm_shuffle_epi8(lut,_mm_and_si128(_mm_srli_epi16(v,4),mask));
++            _mm_storeu_si128(reinterpret_cast<__m128i *>(dst+16+2*j),_mm_unpacklo_epi8(lo,hi));
++            _mm_storeu_si128(reinterpret_cast<__m128i *>(dst+32+2*j),_mm_unpackhi_epi8(lo,hi));
++        }
++    }
++    return true;
++}
++#endif
++inline bool expand(const uint8_t * src, size_t stored, uint8_t * dst, size_t raw) {
++    if (raw % 144 || stored != raw / 144 * 81) return false;
++#if defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
++    if(__builtin_cpu_supports("ssse3")) return expand_simd(src,dst,raw/144);
++#endif
++    for (size_t b = 0; b < raw / 144; ++b, src += 81, dst += 144) {
++        if (src[16] >= 16) return false;
++        std::memcpy(dst, src, 16);
++        const auto & lut=pair_luts[src[16]];
++        for (size_t j=0;j<64;++j) {
++            dst[16+2*j] = lut[src[17+j]&15];
++            dst[17+2*j] = lut[src[17+j]>>4];
++        }
++    }
++    return true;
++}
++inline void pack(const uint8_t * src, size_t blocks, uint8_t * dst) {
++    uint8_t maps[16][16];
++    uint8_t errors[16][16];
++    for (unsigned c=0;c<16;++c) for (int x=0;x<16;++x) {
++        unsigned best=0; int cost=1000;
++        for (unsigned k=0;k<4;++k) {
++            int d=x-books[c][k];
++            if (d*d < cost) {cost=d*d; best=k;}
++        }
++        maps[c][x]=best; errors[c][x]=cost;
++    }
++    for (size_t b=0;b<blocks;++b,src+=144,dst+=81) {
++        unsigned hist[16]={};
++        for (size_t j=16;j<144;++j) {++hist[src[j]&15]; ++hist[src[j]>>4];}
++        unsigned best=0, cost=~0u;
++        for (unsigned c=0;c<16;++c) {
++            unsigned e=0;
++            for (unsigned x=0;x<16;++x) e+=hist[x]*errors[c][x];
++            if(e<cost){cost=e;best=c;}
++        }
++        std::memcpy(dst,src,16); dst[16]=best;
++        const auto * m=maps[best];
++        for(size_t j=0;j<64;++j) {
++            uint8_t a=src[16+2*j], d=src[17+2*j];
++            dst[17+j]=m[a&15] | (m[a>>4]<<2) | (m[d&15]<<4) | (m[d>>4]<<6);
++        }
++    }
++}
++}
+diff --git a/core/src/moe/tiered_reader.h b/core/src/moe/tiered_reader.h
+new file mode 100644
+--- /dev/null
++++ b/core/src/moe/tiered_reader.h
+@@ -0,0 +1,27 @@
++#pragma once
++#include "../io/file_reader.h"
++#include <atomic>
++#include <string>
++#include <unordered_map>
++#include <vector>
++
++namespace bmoe {
++class TieredReader {
++public:
++    bool open(const std::string & path, const std::string & source, int lanes, bool direct,
++              const std::unordered_map<uint64_t, uint64_t> & allowed);
++    bool contains(uint64_t off) const { return entries_.find(off) != entries_.end(); }
++    long long read(int lane, void * dst, uint64_t off, size_t raw);
++    long long read_bytes() const { return reader_.read_bytes(); }
++    long long syscall_ns() const { return reader_.syscall_ns(); }
++    long long expand_ns() const { return expand_ns_.load(); }
++    bool direct() const { return reader_.direct(); }
++    bool reopen() { return reader_.reopen(); }
++private:
++    struct Entry { uint64_t source, offset, raw, stored, codec; };
++    std::unordered_map<uint64_t, Entry> entries_;
++    std::vector<std::vector<uint8_t>> scratch_;
++    FileReader reader_;
++    std::atomic<long long> expand_ns_{0};
++};
++}
+diff --git a/core/src/moe/tiered_reader.cpp b/core/src/moe/tiered_reader.cpp
+new file mode 100644
+--- /dev/null
++++ b/core/src/moe/tiered_reader.cpp
+@@ -0,0 +1,67 @@
++#include "tiered_reader.h"
++#include "tiered_codec.h"
++#include <algorithm>
++#include <chrono>
++#include <cstdio>
++#include <cstring>
++#include <fstream>
++#include <limits>
++
++namespace bmoe {
++bool TieredReader::open(const std::string & path, const std::string & source, int lanes, bool direct,
++                        const std::unordered_map<uint64_t, uint64_t> & allowed) {
++    auto fail = [](const char * reason) { std::fprintf(stderr,"bmoe: tiered pack: %s\n",reason); return false; };
++    const uint16_t endian=1;
++    if (*reinterpret_cast<const uint8_t *>(&endian)!=1) return fail("little-endian host required");
++    std::ifstream f(path,std::ios::binary), src(source,std::ios::binary);
++    if(!f || !src) return fail("cannot open pack or source");
++    f.seekg(0,std::ios::end); uint64_t file_size=f.tellg(); f.seekg(0);
++    src.seekg(0,std::ios::end); uint64_t source_size=src.tellg();
++    char magic[8]; uint64_t size,hash,n;
++    f.read(magic,8); f.read(reinterpret_cast<char *>(&size),8);
++    f.read(reinterpret_cast<char *>(&hash),8); f.read(reinterpret_cast<char *>(&n),8);
++    if(!f || std::memcmp(magic,"JEVTIER1",8) || size!=source_size || n>allowed.size() ||
++       file_size<32 || n>(file_size-32)/40) return fail("invalid header or model size mismatch");
++    uint64_t fingerprint=14695981039346656037ull;
++    auto feed=[&](uint64_t off,size_t bytes) {
++        std::vector<char> b(bytes); src.seekg(off); src.read(b.data(),bytes);
++        if(!src) return false;
++        for(unsigned char c:b) fingerprint=(fingerprint^c)*1099511628211ull;
++        return true;
++    };
++    if(!feed(0,std::min<uint64_t>(size,65536))) return fail("source read failed");
++    if(size>=4096) for(unsigned i=0;i<16;++i)
++        if(!feed((size-4096)*i/15,4096)) return fail("source read failed");
++    if(fingerprint!=hash) return fail("source fingerprint mismatch");
++    size_t max_stored=0;
++    uint64_t previous_end=32+n*40;
++    for(uint64_t i=0;i<n;++i) {
++        Entry e{}; static_assert(sizeof(e)==40,"pack entry size");
++        f.read(reinterpret_cast<char *>(&e),sizeof(e));
++        auto a=allowed.find(e.source);
++        if(!f || a==allowed.end() || e.raw!=a->second || e.raw%144 || e.codec!=1 ||
++           e.stored!=e.raw/144*81 || e.offset%4096 || e.offset<previous_end ||
++           e.offset>file_size || e.stored>file_size-e.offset || entries_.count(e.source))
++            return fail("invalid or incompatible extent table");
++        previous_end=e.offset+e.stored;
++        entries_.emplace(e.source,e); max_stored=std::max<size_t>(max_stored,e.stored);
++    }
++    scratch_.assign(lanes,std::vector<uint8_t>(max_stored));
++    if(!reader_.open(path,lanes,direct,4096,max_stored+8192)) return fail("reader open failed");
++    std::fprintf(stderr,"bmoe: LOSSY tiered storage ON: %zu cold Q4_K slices; expanded cache unchanged\n",entries_.size());
++    return true;
++}
++
++long long TieredReader::read(int lane, void * dst, uint64_t off, size_t raw) {
++    auto it=entries_.find(off);
++    if(it==entries_.end() || it->second.raw!=raw || lane<0 || size_t(lane)>=scratch_.size()) return -1;
++    const auto & e=it->second;
++    auto & buf=scratch_[lane];
++    long long count=reader_.read(lane,buf.data(),e.offset,e.stored);
++    if(count<0) return -1;
++    auto start=std::chrono::steady_clock::now();
++    bool ok=jev_tiered::expand(buf.data(),e.stored,static_cast<uint8_t *>(dst),raw);
++    expand_ns_+=std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now()-start).count();
++    return ok ? count : -1;
++}
++}
+diff --git a/docs/tiered-storage.md b/docs/tiered-storage.md
+new file mode 100644
+--- /dev/null
++++ b/docs/tiered-storage.md
+@@ -0,0 +1,36 @@
++# Experimental JEV tiered storage
++
++Disabled by default. `--tiered-pack PATH` adds a lossy sidecar for a single-shard
++model's Q4_K expert slices. Hot slices still come from the original GGUF. Cold
++slices expand into the Q4_K buffers the CPU kernels already consume. No changes
++to llama.cpp, routing overrides, or expert dropping.
++
++The JEVTIER1 header stores source file size, sampled FNV-1a fingerprint and extent
++count. Little-endian 40-byte entries store source offset, pack offset, raw length,
++stored length and codec id. Pack extents are 4096-aligned. Entries are validated
++against discovered Q4_K expert geometry. The fingerprint guards accidental model
++mismatches, not malicious substitution; the builder records full source SHA256.
++
++Codec 1 retains a Q4_K block's 16 metadata bytes, selects one of 16 four-value
++nibble codebooks, and stores 256 two-bit indices: 81 bytes instead of 144. Decoding
++restores quantized nibbles, NOT the original cold weights. Hot weights stay exact.
++SSSE3 accelerates expansion on supported x86 CPUs; other targets use scalar code.
++
++SSD transfers shrink, but expanded cache size and CPU weight traffic do not. The
++original GGUF is still required, so the sidecar adds installed disk usage. This
++is not a compact replacement GGUF or the Flash-MoE file format.
++
++Expert read-byte counters include source and sidecar reads. A shutdown diagnostic
++reports sidecar bytes and summed expansion lane-seconds. Expansion contributes to
++wall time but not reader syscall time. Speculative byte counts still describe
++logical expanded slices. Parallel lane-seconds are not serial wall time.
++
++`--choices-only --ppl-list FILE --ppl-choices A,B` scores already-rendered chat
++prompts. Special tokens are parsed; only last-position logits are requested.
++Labels must be single tokens. No text perplexity is computed. Probabilities are
++uncalibrated. Many prompts share one loaded process, but prefixes are not batched
++together. Ordinary perplexity mode is unchanged.
++
++The parent JEV workspace contains the builder, tests and scoring adapter under
++`scripts/tiered/`, with results in `docs/TIERED-STORAGE-RESULT.md`. Both measured
++quantization policies failed their quality gate and remain experimental.

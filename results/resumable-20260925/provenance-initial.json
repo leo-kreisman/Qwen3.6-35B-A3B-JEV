@@ -1,0 +1,24 @@
+{
+  "files": {
+    "scripts/resumable/tiles.py": "9c99820d2b3310837f95d899603b0cedabb82dfecaca479fd52df2bdf8a6fc0f",
+    "scripts/resumable/simulate.py": "04a37eced8107acdb7b5fbdddf6f7c122c490dbed08de1c358c4a95399c0538b",
+    "scripts/resumable/prepare.py": "e219d79a9c0d9b181f54814f151ca33761ab149c9cae12b29bd3f2a715c77c49",
+    "scripts/resumable/analyze.py": "0ec0e42202207047a9f89cb54c2b81a7af3d519bf31f0976563353ee886774df",
+    "scripts/resumable/test_resumable.py": "f4d8791a4a84045864c0cd1ab2bf2b05898760a79696f38cd389e1a59208971d",
+    "scripts/resumable/run_matrix.py": "c338245c5a2732359901b088bd41a00915201c10d1cd211e5888f362f3722d7d",
+    "scripts/resumable/probe.cpp": "5857cc4a65ef1d455959ceec53787240bfc463177e8df4ce8d6a84fbb0f1277a",
+    "scripts/resumable/dequant.cpp": "8df45442774dca4e2280ace84245d6154af31ac0284dcfe5df80f872db3571ba",
+    "scripts/resumable/build.sh": "65e41dceb40798170b308b6d98a90abfc767288ae225e38cada26979759d06c3",
+    "results/resumable-20260925/input.json": "cb0362c75dfc33c1192498e98bebc5feb0f7cd58c2358711eeaae8777ede19eb",
+    "results/resumable-20260925/probe": "bd605e9728459217aa77a1f3705c72ad038cd0a7679d6bb8f8f1e75e5e4bcb5d",
+    "results/resumable-20260925/dequant.so": "697d0cc491de25c4384c3465e5babafb523e7206c6c851410d5711026eabca8f"
+  },
+  "model": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+  "model_digest_record": {
+    "sha256": "5cacb2a89facde696385d12a2eacb7a031feff0456d3c7d05ce73a2ae68a6f24",
+    "bytes": 20377246656,
+    "mtime_ns": 1790091800001372492
+  },
+  "llama_commit": "0e8c83e512b99ccf83e50798b86f0b0ec40a7b0a",
+  "vendor_commit": "74ba18f53d308e3271a6b7dbbdaf8e59af64cdde"
+}

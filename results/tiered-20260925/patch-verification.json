@@ -1,0 +1,21 @@
+{
+  "base_commit": "74ba18f53d308e3271a6b7dbbdaf8e59af64cdde",
+  "patch_sha256": "964765ddbe9a4261bae644411bfc56e6934ce1f4a1962ff0e97aa03cbe287d4c",
+  "files": [
+    "CHANGELOG.md",
+    "README.md",
+    "cli/main.cpp",
+    "core/CMakeLists.txt",
+    "core/include/bmoe/config.h",
+    "core/include/bmoe/session.h",
+    "core/src/config.cpp",
+    "core/src/engine/session.cpp",
+    "core/src/moe/expert_stream_source.cpp",
+    "core/src/moe/expert_stream_source.h",
+    "core/src/moe/tiered_codec.h",
+    "core/src/moe/tiered_reader.h",
+    "core/src/moe/tiered_reader.cpp",
+    "docs/tiered-storage.md"
+  ],
+  "apply_roundtrip_matches": true
+}

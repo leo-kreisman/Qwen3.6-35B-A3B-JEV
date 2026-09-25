@@ -1,0 +1,35 @@
+{
+  "source_files": {
+    "scripts/resumable/tiles.py": "da8420b8b648fa778625ce17380527b2413ad02c4a4ec5490fe01996aba14faa",
+    "scripts/resumable/simulate.py": "a5214c8340d7a09e3f7e5ff8595544b1a894863da62640b8d26914ac15ed2011",
+    "scripts/resumable/native_tiles.h": "ed213d1be96fcec84059ee6f4b86de42afa5d3e1e8b876e55484cf0bf107553e",
+    "scripts/resumable/build.sh": "2f45c8d28f92d3c78dcff14c849039a29137ac523b447d8f325f197b86ff6cd2",
+    "scripts/resumable/prepare.py": "e219d79a9c0d9b181f54814f151ca33761ab149c9cae12b29bd3f2a715c77c49",
+    "scripts/resumable/probe.cpp": "d28fde39e7aaf33577985c332724c6a09d2ad9b2f63dc482fc9e606dc11d99ef",
+    "scripts/resumable/compare_tensors.py": "f67b1587066a41725f3d8d278b5df54a4a330d19f056a91da814d460f92545c3",
+    "scripts/resumable/native_tests.cpp": "4bb4420b82ba2dadeeec0a9c571f1da91957fcf7117b6f19c06ca2efcfcb1445",
+    "scripts/resumable/README.md": "7975c59912184ace2185f8c98e1f7f6ff5874745aa8f34d04ef3e2dfc6cb6d9b",
+    "scripts/resumable/analyze.py": "0ec0e42202207047a9f89cb54c2b81a7af3d519bf31f0976563353ee886774df",
+    "scripts/resumable/test_resumable.py": "d04b5d2b342e7a543c1b9b5e20a588ce6f8069fcfbf4acfd05633e705d852aae",
+    "scripts/resumable/run_matrix.py": "c338245c5a2732359901b088bd41a00915201c10d1cd211e5888f362f3722d7d",
+    "scripts/resumable/dequant.cpp": "8df45442774dca4e2280ace84245d6154af31ac0284dcfe5df80f872db3571ba"
+  },
+  "binaries": {
+    "results/resumable-native-20260925/detail-probe": "6fbb6c27e1e8abe6a6f9b316eac45aa0e289fdfa1d69e9c47239de17d8078ddf",
+    "results/resumable-native-20260925/attention-probe": "4087ca0a9f28a227ee8724e174bf4a8b14aa655052663998673d37a7b9b7288e",
+    "results/resumable-native-20260925/staged-probe": "8768fe6ca1b99f0aca071a9348eb96a3f1732f0cb3665c89e6f23416e27e4fb6",
+    "results/resumable-native-20260925/validated-probe": "6a87bbf957ed25d5c3c9cb081c4b44a903fce27cad1217c6e57a00418ea266ff",
+    "results/resumable-native-20260925/final-probe": "a09503aa1379fbf9178613fab02519eb48ff1abed468f5bc2ad7ac5c9f1fcfc4",
+    "results/resumable-native-20260925/probe": "0bf8b0bce65ba545de7ed2d995d923b523de2ddaa66a240dc7b579c008c2e6be",
+    "results/resumable-native-20260925/trace-probe": "1b2a1aa165b1358a60fe17241d2f42646e8e4eb71e97b518e1d67ca71cef4cc7",
+    "results/resumable-native-20260925/exact-probe": "5065323a8623b6c8c6c8f8599b50561c2e5bd3d060cd561c3ed8a33f9306b42a",
+    "results/resumable-native-20260925/native-tests": "53051aa6a8e800dc4f37ae94136a1f4ca45113f274b333eae952d1fd799509be",
+    "results/resumable-native-20260925/isolation-probe": "2530e937e65598723c34f87b33e2b4f6152e94e91d992f75b55f0307efa86aba"
+  },
+  "model_provenance": {
+    "sha256": "5cacb2a89facde696385d12a2eacb7a031feff0456d3c7d05ce73a2ae68a6f24",
+    "bytes": 20377246656,
+    "mtime_ns": 1790091800001372492
+  },
+  "note": "Final maintained code. Earlier candidate binary hashes identify exploratory runs; they are not the maintained strict executor."
+}

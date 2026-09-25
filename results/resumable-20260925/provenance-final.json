@@ -1,0 +1,32 @@
+{
+  "files": {
+    "scripts/resumable/tiles.py": "da8420b8b648fa778625ce17380527b2413ad02c4a4ec5490fe01996aba14faa",
+    "scripts/resumable/simulate.py": "a5214c8340d7a09e3f7e5ff8595544b1a894863da62640b8d26914ac15ed2011",
+    "scripts/resumable/prepare.py": "e219d79a9c0d9b181f54814f151ca33761ab149c9cae12b29bd3f2a715c77c49",
+    "scripts/resumable/analyze.py": "0ec0e42202207047a9f89cb54c2b81a7af3d519bf31f0976563353ee886774df",
+    "scripts/resumable/test_resumable.py": "d04b5d2b342e7a543c1b9b5e20a588ce6f8069fcfbf4acfd05633e705d852aae",
+    "scripts/resumable/run_matrix.py": "c338245c5a2732359901b088bd41a00915201c10d1cd211e5888f362f3722d7d",
+    "scripts/resumable/probe.cpp": "5857cc4a65ef1d455959ceec53787240bfc463177e8df4ce8d6a84fbb0f1277a",
+    "scripts/resumable/dequant.cpp": "8df45442774dca4e2280ace84245d6154af31ac0284dcfe5df80f872db3571ba",
+    "scripts/resumable/build.sh": "65e41dceb40798170b308b6d98a90abfc767288ae225e38cada26979759d06c3",
+    "results/resumable-20260925/input.json": "cb0362c75dfc33c1192498e98bebc5feb0f7cd58c2358711eeaae8777ede19eb",
+    "results/resumable-20260925/holdout-input.json": "c15a66f3cb95d59b99f0f7bc8521ef25a32c1960f59c1eea84bebdf9191c8aec",
+    "results/resumable-20260925/holdout.jsonl": "9d4a5173ec93b43b68bc075954d1998639188b406caf68d67d13502dda1d68b9",
+    "results/resumable-20260925/probe": "bd605e9728459217aa77a1f3705c72ad038cd0a7679d6bb8f8f1e75e5e4bcb5d",
+    "results/resumable-20260925/dequant.so": "697d0cc491de25c4384c3465e5babafb523e7206c6c851410d5711026eabca8f",
+    "vendor/BigMoeOnEdge/build/bin/libggml-base.so": "486dba6235573a1f442b35d14bd1e53696bc3f4beec03f0acee108662996d184",
+    "vendor/BigMoeOnEdge/build/bin/libllama-common.so": "6eff782735f09bfefaed01ef946764828f61452463cb984140da1c8104aac084",
+    "vendor/BigMoeOnEdge/build/bin/libllama.so": "66f6d4ec0208371571d6fc1bda27597f6d0c6f7890317e41b2226d7e93740a21",
+    "vendor/BigMoeOnEdge/build/bin/libggml.so": "48b7e86ed97e2c7b7f8320a0bc97b6b465f495ae1eb62481f94e46474e27283c",
+    "vendor/BigMoeOnEdge/build/bin/libggml-cpu.so": "9b2b6e9c9eef68e984d306caf40c78ac4e7bf8661c68c4c50506c7e36da80ae9"
+  },
+  "model": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+  "model_digest_record": {
+    "sha256": "5cacb2a89facde696385d12a2eacb7a031feff0456d3c7d05ce73a2ae68a6f24",
+    "bytes": 20377246656,
+    "mtime_ns": 1790091800001372492
+  },
+  "llama_commit": "0e8c83e512b99ccf83e50798b86f0b0ec40a7b0a",
+  "vendor_commit": "74ba18f53d308e3271a6b7dbbdaf8e59af64cdde",
+  "note": "Final experiment code and linked library hashes; model digest copied from existing provenance record."
+}

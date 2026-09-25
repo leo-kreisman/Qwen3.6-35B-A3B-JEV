@@ -1,0 +1,446 @@
+{
+  "count": 12,
+  "baseline_correct": 11,
+  "candidate_correct": 10,
+  "flips": 1,
+  "max_probability_drift": 0.17545041445438825,
+  "baseline_scoring_seconds": 85.1977,
+  "candidate_scoring_seconds": 85.5333,
+  "speedup": 0.9960763819471481,
+  "baseline_expert_read_bytes": 125598056448,
+  "candidate_expert_read_bytes": 120583368704,
+  "rows": [
+    {
+      "id": "ui-0",
+      "expected": "A",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/00.txt",
+        "tokens": 104,
+        "seconds": 7.2642,
+        "expert_read_bytes": 10592894976,
+        "logp": {
+          "A": -0.6500163153257787,
+          "B": -0.7409739569273412
+        },
+        "probabilities": {
+          "A": 0.5227237458770636,
+          "B": 0.47727625412293645
+        },
+        "winner": "A"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/00.txt",
+        "tokens": 104,
+        "seconds": 7.231,
+        "expert_read_bytes": 10092244992,
+        "logp": {
+          "A": -1.0596876684302252,
+          "B": -0.4286413732642096
+        },
+        "probabilities": {
+          "A": 0.34727333142267536,
+          "B": 0.6527266685773246
+        },
+        "winner": "B"
+      },
+      "flipped": true,
+      "max_probability_drift": 0.17545041445438825
+    },
+    {
+      "id": "ui-1",
+      "expected": "B",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/01.txt",
+        "tokens": 104,
+        "seconds": 6.8785,
+        "expert_read_bytes": 10440142848,
+        "logp": {
+          "A": -4.657428069816621,
+          "B": -0.011714263664277524
+        },
+        "probabilities": {
+          "A": 0.009511338494685731,
+          "B": 0.9904886615053142
+        },
+        "winner": "B"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/01.txt",
+        "tokens": 104,
+        "seconds": 6.9896,
+        "expert_read_bytes": 9969807360,
+        "logp": {
+          "A": -4.508142239996662,
+          "B": -0.013974912115802596
+        },
+        "probabilities": {
+          "A": 0.01105050289548573,
+          "B": 0.9889494971045142
+        },
+        "winner": "B"
+      },
+      "flipped": false,
+      "max_probability_drift": 0.0015391644008000416
+    },
+    {
+      "id": "ui-2",
+      "expected": "B",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/02.txt",
+        "tokens": 119,
+        "seconds": 7.6048,
+        "expert_read_bytes": 10939527168,
+        "logp": {
+          "A": -1.7590083859685244,
+          "B": -0.19288633091481344
+        },
+        "probabilities": {
+          "A": 0.17276992636459834,
+          "B": 0.8272300736354017
+        },
+        "winner": "B"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/02.txt",
+        "tokens": 119,
+        "seconds": 7.778,
+        "expert_read_bytes": 10424524800,
+        "logp": {
+          "A": -3.2484612092528913,
+          "B": -0.04048963637691472
+        },
+        "probabilities": {
+          "A": 0.03886683796638257,
+          "B": 0.9611331620336173
+        },
+        "winner": "B"
+      },
+      "flipped": false,
+      "max_probability_drift": 0.13390308839821577
+    },
+    {
+      "id": "ui-3",
+      "expected": "A",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/03.txt",
+        "tokens": 119,
+        "seconds": 7.559,
+        "expert_read_bytes": 10935152640,
+        "logp": {
+          "A": -0.00011805243813256538,
+          "B": -11.514589106515281
+        },
+        "probabilities": {
+          "A": 0.9999900155436433,
+          "B": 9.984456356643899e-06
+        },
+        "winner": "A"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/03.txt",
+        "tokens": 119,
+        "seconds": 7.5525,
+        "expert_read_bytes": 10457546752,
+        "logp": {
+          "A": -8.125470013808922e-05,
+          "B": -11.857964708069279
+        },
+        "probabilities": {
+          "A": 0.9999929175490858,
+          "B": 7.082450914171546e-06
+        },
+        "winner": "A"
+      },
+      "flipped": false,
+      "max_probability_drift": 2.9020054425066277e-06
+    },
+    {
+      "id": "ui-4",
+      "expected": "B",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/04.txt",
+        "tokens": 112,
+        "seconds": 7.2324,
+        "expert_read_bytes": 10703953920,
+        "logp": {
+          "A": -8.53460926684728,
+          "B": -0.01108021411290494
+        },
+        "probabilities": {
+          "A": 0.00019869734510439546,
+          "B": 0.9998013026548956
+        },
+        "winner": "B"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/04.txt",
+        "tokens": 112,
+        "seconds": 7.3437,
+        "expert_read_bytes": 10270519296,
+        "logp": {
+          "A": -9.01214920708318,
+          "B": -0.0009759587921642776
+        },
+        "probabilities": {
+          "A": 0.00012202369882455479,
+          "B": 0.9998779763011754
+        },
+        "winner": "B"
+      },
+      "flipped": false,
+      "max_probability_drift": 7.667364627984067e-05
+    },
+    {
+      "id": "ui-5",
+      "expected": "A",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/05.txt",
+        "tokens": 106,
+        "seconds": 6.966,
+        "expert_read_bytes": 10435657728,
+        "logp": {
+          "A": -0.0005013632827619574,
+          "B": -9.769525258546434
+        },
+        "probabilities": {
+          "A": 0.9999428071169648,
+          "B": 5.7192883035136776e-05
+        },
+        "winner": "A"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/05.txt",
+        "tokens": 106,
+        "seconds": 7.0315,
+        "expert_read_bytes": 10052849664,
+        "logp": {
+          "A": -0.00040426896070755447,
+          "B": -9.785385042886489
+        },
+        "probabilities": {
+          "A": 0.9999437124431906,
+          "B": 5.6287556809301945e-05
+        },
+        "winner": "A"
+      },
+      "flipped": false,
+      "max_probability_drift": 9.053262258348308e-07
+    },
+    {
+      "id": "ui-6",
+      "expected": "B",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/06.txt",
+        "tokens": 105,
+        "seconds": 6.9431,
+        "expert_read_bytes": 10183348224,
+        "logp": {
+          "A": -2.6877190451009128,
+          "B": -0.07229584258626431
+        },
+        "probabilities": {
+          "A": 0.06815238129891116,
+          "B": 0.9318476187010888
+        },
+        "winner": "B"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/06.txt",
+        "tokens": 105,
+        "seconds": 6.886,
+        "expert_read_bytes": 9763176448,
+        "logp": {
+          "A": -2.1500493037402606,
+          "B": -0.12661752578615904
+        },
+        "probabilities": {
+          "A": 0.11676460371513342,
+          "B": 0.8832353962848666
+        },
+        "winner": "B"
+      },
+      "flipped": false,
+      "max_probability_drift": 0.04861222241622226
+    },
+    {
+      "id": "ui-7",
+      "expected": "A",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/07.txt",
+        "tokens": 105,
+        "seconds": 6.884,
+        "expert_read_bytes": 10115801088,
+        "logp": {
+          "A": -2.2292691532743483,
+          "B": -0.11587727705364514
+        },
+        "probabilities": {
+          "A": 0.10780199938854106,
+          "B": 0.8921980006114589
+        },
+        "winner": "B"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/07.txt",
+        "tokens": 105,
+        "seconds": 6.8367,
+        "expert_read_bytes": 9733746688,
+        "logp": {
+          "A": -2.3193383137973385,
+          "B": -0.10544823811374471
+        },
+        "probabilities": {
+          "A": 0.09851007179126063,
+          "B": 0.9014899282087394
+        },
+        "winner": "B"
+      },
+      "flipped": false,
+      "max_probability_drift": 0.00929192759728048
+    },
+    {
+      "id": "ui-8",
+      "expected": "B",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/08.txt",
+        "tokens": 101,
+        "seconds": 6.8839,
+        "expert_read_bytes": 10120667136,
+        "logp": {
+          "A": -8.235989173619515,
+          "B": -0.0026937329456870884
+        },
+        "probabilities": {
+          "A": 0.0002655888650989893,
+          "B": 0.9997344111349011
+        },
+        "winner": "B"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/08.txt",
+        "tokens": 101,
+        "seconds": 6.7743,
+        "expert_read_bytes": 9778352128,
+        "logp": {
+          "A": -8.91132450971546,
+          "B": -0.0003442851060846408
+        },
+        "probabilities": {
+          "A": 0.0001348813418822278,
+          "B": 0.9998651186581177
+        },
+        "winner": "B"
+      },
+      "flipped": false,
+      "max_probability_drift": 0.00013070752321676148
+    },
+    {
+      "id": "ui-9",
+      "expected": "A",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/09.txt",
+        "tokens": 101,
+        "seconds": 6.7923,
+        "expert_read_bytes": 10128654336,
+        "logp": {
+          "A": -0.00041114179783008353,
+          "B": -11.148924935743143
+        },
+        "probabilities": {
+          "A": 0.9999856035396484,
+          "B": 1.4396460351681413e-05
+        },
+        "winner": "A"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/09.txt",
+        "tokens": 101,
+        "seconds": 6.7993,
+        "expert_read_bytes": 9820471296,
+        "logp": {
+          "A": -0.001287845970711743,
+          "B": -11.001566318871102
+        },
+        "probabilities": {
+          "A": 0.9999833032283202,
+          "B": 1.6696771679870365e-05
+        },
+        "winner": "A"
+      },
+      "flipped": false,
+      "max_probability_drift": 2.3003113281960808e-06
+    },
+    {
+      "id": "ui-10",
+      "expected": "B",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/10.txt",
+        "tokens": 109,
+        "seconds": 7.1151,
+        "expert_read_bytes": 10526478336,
+        "logp": {
+          "A": -10.275435155382059,
+          "B": -0.00046414708127784365
+        },
+        "probabilities": {
+          "A": 3.4484331613173516e-05,
+          "B": 0.9999655156683868
+        },
+        "winner": "B"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/10.txt",
+        "tokens": 109,
+        "seconds": 7.2931,
+        "expert_read_bytes": 10161651712,
+        "logp": {
+          "A": -10.409010927237144,
+          "B": -0.0008993549715192728
+        },
+        "probabilities": {
+          "A": 3.0185715009004596e-05,
+          "B": 0.9999698142849911
+        },
+        "winner": "B"
+      },
+      "flipped": false,
+      "max_probability_drift": 4.298616604336836e-06
+    },
+    {
+      "id": "ui-11",
+      "expected": "A",
+      "baseline": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/11.txt",
+        "tokens": 108,
+        "seconds": 7.0744,
+        "expert_read_bytes": 10475778048,
+        "logp": {
+          "A": -0.0001344689870634852,
+          "B": -10.021224022820071
+        },
+        "probabilities": {
+          "A": 0.9999555494847918,
+          "B": 4.44505152081869e-05
+        },
+        "winner": "A"
+      },
+      "candidate": {
+        "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/validation/11.txt",
+        "tokens": 108,
+        "seconds": 7.0176,
+        "expert_read_bytes": 10058477568,
+        "logp": {
+          "A": -0.0002104032706178316,
+          "B": -10.600245117015735
+        },
+        "probabilities": {
+          "A": 0.9999750854759306,
+          "B": 2.4914524069529037e-05
+        },
+        "winner": "A"
+      },
+      "flipped": false,
+      "max_probability_drift": 1.9535991138797115e-05
+    }
+  ]
+}

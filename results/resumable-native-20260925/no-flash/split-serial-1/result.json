@@ -1,0 +1,40 @@
+{
+  "answers": [
+    {
+      "id": "holdout-0",
+      "logits": [
+        21.375932693481445,
+        22.332195281982422
+      ],
+      "probabilities": [
+        0.27762711057082945,
+        0.7223728894291704
+      ]
+    }
+  ],
+  "branches": 1,
+  "flash_attention": "disabled",
+  "load_read_bytes": 20377513984,
+  "load_seconds": 12.050302369,
+  "mode": "split-serial",
+  "n_ctx": 4096,
+  "n_ubatch": 1024,
+  "phases": [
+    {
+      "phase": "prefix-0",
+      "read_bytes": 12487106560,
+      "seconds": 8.646737399,
+      "tokens": 58
+    },
+    {
+      "phase": "suffix-0",
+      "read_bytes": 11563491328,
+      "seconds": 7.833258923,
+      "tokens": 46
+    }
+  ],
+  "prefix_tokens": 58,
+  "scoring_read_bytes": 24050597888,
+  "scoring_seconds": 16.48482453,
+  "tracing": false
+}

@@ -1,0 +1,4 @@
+# Patch context and frozen tokenizer fixtures intentionally preserve whitespace.
+patch/**/*.patch -whitespace
+results/**/calibration/*.txt -whitespace
+results/**/validation/*.txt -whitespace

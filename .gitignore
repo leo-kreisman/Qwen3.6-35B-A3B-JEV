@@ -22,6 +22,15 @@ uv-setuptools-*.lock
 # Model weights. 20 GB each; never in git. Download per SETUP.md.
 *.gguf
 *.safetensors
+*.tier
+results/tiered-*/codec.so
+# Rebuildable resumable-inference probes, weight bundles and activation captures.
+results/resumable-*/probe
+results/resumable-*/dequant.so
+results/resumable-*/**/weights.bin
+results/resumable-*/**/*.f32
+results/resumable-*/*.npy
+results/resumable-*/**/*.npy
 *.sha256.json
 
 # Local scratch
@@ -39,3 +48,8 @@ scripts/io/bench_expert_pack
 # results/ and does not notice the prefix. The findings they produced are recorded
 # in docs/SEMIF_LLAMACPP_SSD.md instead.
 INVALID-*.jsonl
+
+# Native resumable executor validation binaries.
+results/resumable-*/isolation-probe
+results/resumable-*/native-tests
+results/resumable-*/*-probe

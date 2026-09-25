@@ -1,0 +1,39 @@
+{
+  "command": [
+    "/home/scribe/Projects/JEV_experiment/vendor/BigMoeOnEdge/build/cli/bmoe-cli",
+    "-m",
+    "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+    "--moe-stream",
+    "--dense-weights",
+    "anon",
+    "--cache-mb",
+    "3000",
+    "--io-threads",
+    "4",
+    "-t",
+    "6",
+    "-c",
+    "512",
+    "--ubatch",
+    "512",
+    "--ppl-list",
+    "/tmp/jev-tiered-qtwqzeu6/inputs.list",
+    "--ppl-choices",
+    "A,B,C,D",
+    "--choices-only"
+  ],
+  "wall_seconds": 24.604860141000245,
+  "exit_code": 0,
+  "process_tree_read_bytes": 30336626688,
+  "memory_max": 8589934592,
+  "memory_peak": 8589934592,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 7380,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": []
+}

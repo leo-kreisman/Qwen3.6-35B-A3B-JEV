@@ -1,0 +1,78 @@
+[
+  {
+    "id": "c1-destination",
+    "state": "Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Z\u00fcrich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Z\u00fcrich to London on 2026-10-20.",
+    "question": "Which observed element should receive the destination value 'London'?",
+    "options": [
+      {
+        "id": "e0",
+        "description": "Element 0, the origin input, which already holds Z\u00fcrich."
+      },
+      {
+        "id": "e1",
+        "description": "Element 1, the destination input, which is currently empty."
+      },
+      {
+        "id": "e2",
+        "description": "Element 2, the departure date control."
+      },
+      {
+        "id": "e3",
+        "description": "Element 3, the search control."
+      }
+    ],
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/calibration/00.txt",
+    "prompt_sha256": "e4c77f474841d75db0c9f3c91bb432b4f1a4f1b53a6f4cf77c2e6ed519ca73da"
+  },
+  {
+    "id": "c2-date-matches",
+    "state": "Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Z\u00fcrich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Z\u00fcrich to London on 2026-10-20.",
+    "question": "Does the observed departure value 'Sat, Oct 18' name the date the goal requests, 2026-10-20?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes, 'Sat, Oct 18' is the requested date."
+      },
+      {
+        "id": "no",
+        "description": "No, it names a different date."
+      }
+    ],
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/calibration/01.txt",
+    "prompt_sha256": "4503ac97c0a8ac634c1aa3a60f985e8a27f6c83c46edd2dff837e6507ab8a7b9"
+  },
+  {
+    "id": "c3-origin-correct",
+    "state": "Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Z\u00fcrich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Z\u00fcrich to London on 2026-10-20.",
+    "question": "Does the origin input already hold the value the goal names as the starting point?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes, it holds Z\u00fcrich, the requested origin."
+      },
+      {
+        "id": "no",
+        "description": "No, the origin does not match the goal."
+      }
+    ],
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/calibration/02.txt",
+    "prompt_sha256": "c27df3d9397c1b8f189d3dfc3d1a7b851bb7a4e88cef7c101c5522193a9889c4"
+  },
+  {
+    "id": "c4-oneway-active",
+    "state": "Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Z\u00fcrich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Z\u00fcrich to London on 2026-10-20.",
+    "question": "Is the trip type control already in the state the goal requires?",
+    "options": [
+      {
+        "id": "yes",
+        "description": "Yes, 'One way' is the selected trip type."
+      },
+      {
+        "id": "no",
+        "description": "No, the control is not in the required state."
+      }
+    ],
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/jev/calibration/03.txt",
+    "prompt_sha256": "9064ba70f9e644c0ba97f2c68a10b69cf84ee1e257af0a0ba770961c43855601"
+  }
+]

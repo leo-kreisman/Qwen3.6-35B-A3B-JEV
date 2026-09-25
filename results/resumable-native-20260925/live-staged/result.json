@@ -1,0 +1,131 @@
+{
+  "answers": [
+    {
+      "id": "holdout-0",
+      "logits": [
+        21.608417510986328,
+        22.07546615600586
+      ],
+      "probabilities": [
+        0.38531502720680394,
+        0.6146849727931961
+      ]
+    },
+    {
+      "id": "holdout-1",
+      "logits": [
+        28.824512481689453,
+        18.475921630859375
+      ],
+      "probabilities": [
+        0.9999679631222246,
+        3.203687777541667e-05
+      ]
+    },
+    {
+      "id": "holdout-2",
+      "logits": [
+        19.212339401245117,
+        28.905696868896484
+      ],
+      "probabilities": [
+        6.16881220040224e-05,
+        0.9999383118779959
+      ]
+    },
+    {
+      "id": "holdout-3",
+      "logits": [
+        19.038986206054688,
+        28.836261749267578
+      ],
+      "probabilities": [
+        5.559978939647957e-05,
+        0.9999444002106036
+      ]
+    },
+    {
+      "id": "holdout-4",
+      "logits": [
+        19.221555709838867,
+        26.75950813293457
+      ],
+      "probabilities": [
+        0.0005322034227125492,
+        0.9994677965772875
+      ]
+    },
+    {
+      "id": "holdout-5",
+      "logits": [
+        28.61733055114746,
+        16.55019760131836
+      ],
+      "probabilities": [
+        0.9999942547589832,
+        5.745241016864962e-06
+      ]
+    },
+    {
+      "id": "holdout-6",
+      "logits": [
+        28.82773208618164,
+        17.620283126831055
+      ],
+      "probabilities": [
+        0.9999864274682512,
+        1.3572531748725474e-05
+      ]
+    },
+    {
+      "id": "holdout-7",
+      "logits": [
+        18.924718856811523,
+        28.954017639160156
+      ],
+      "probabilities": [
+        4.4087120494718864e-05,
+        0.9999559128795054
+      ]
+    }
+  ],
+  "branches": 8,
+  "load_read_bytes": 20377772032,
+  "load_seconds": 12.654834418,
+  "mode": "full-padded",
+  "n_ctx": 4096,
+  "n_ubatch": 1024,
+  "native_tiles": {
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 398131200,
+    "expert_visits": 225,
+    "peak_accounted_work_bytes": 97436416,
+    "preserve_down_reduction": true,
+    "read_calls": 450,
+    "routed_rows": 6976,
+    "seconds": 0.481363165,
+    "work_limit_bytes": 268435456
+  },
+  "phases": [
+    {
+      "phase": "full",
+      "read_bytes": 17089089536,
+      "seconds": 35.561093978,
+      "tokens": 872
+    }
+  ],
+  "prefix_tokens": 58,
+  "scoring_read_bytes": 17089089536,
+  "scoring_seconds": 35.56120411,
+  "tile_checks": [
+    {
+      "max_abs_error": 4.470348358154297e-08,
+      "phase": "full",
+      "relative_l2_error": 1.135328931996303e-07,
+      "replaced": true,
+      "rows": 872
+    }
+  ],
+  "tile_validation_only": true,
+  "tracing": true
+}

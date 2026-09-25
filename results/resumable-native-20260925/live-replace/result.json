@@ -1,0 +1,130 @@
+{
+  "answers": [
+    {
+      "id": "holdout-0",
+      "logits": [
+        21.54079818725586,
+        21.992630004882813
+      ],
+      "probabilities": [
+        0.388925323370369,
+        0.6110746766296311
+      ]
+    },
+    {
+      "id": "holdout-1",
+      "logits": [
+        28.39202308654785,
+        17.721389770507813
+      ],
+      "probabilities": [
+        0.9999767837137629,
+        2.321628623709076e-05
+      ]
+    },
+    {
+      "id": "holdout-2",
+      "logits": [
+        19.367477416992188,
+        28.7078857421875
+      ],
+      "probabilities": [
+        8.77958675625035e-05,
+        0.9999122041324375
+      ]
+    },
+    {
+      "id": "holdout-3",
+      "logits": [
+        18.35400390625,
+        28.485515594482422
+      ],
+      "probabilities": [
+        3.980366785765975e-05,
+        0.9999601963321423
+      ]
+    },
+    {
+      "id": "holdout-4",
+      "logits": [
+        18.142086029052734,
+        26.816112518310547
+      ],
+      "probabilities": [
+        0.0001709400848327286,
+        0.9998290599151674
+      ]
+    },
+    {
+      "id": "holdout-5",
+      "logits": [
+        28.064197540283203,
+        16.5573673248291
+      ],
+      "probabilities": [
+        0.9999899389625919,
+        1.0061037407996772e-05
+      ]
+    },
+    {
+      "id": "holdout-6",
+      "logits": [
+        28.23661231994629,
+        16.298294067382813
+      ],
+      "probabilities": [
+        0.9999934649122786,
+        6.535087721302285e-06
+      ]
+    },
+    {
+      "id": "holdout-7",
+      "logits": [
+        20.72781753540039,
+        26.77628517150879
+      ],
+      "probabilities": [
+        0.0023559144389669277,
+        0.9976440855610331
+      ]
+    }
+  ],
+  "branches": 8,
+  "load_read_bytes": 20377772032,
+  "load_seconds": 12.697849295,
+  "mode": "full-padded",
+  "n_ctx": 4096,
+  "n_ubatch": 1024,
+  "native_tiles": {
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 398131200,
+    "expert_visits": 225,
+    "peak_accounted_work_bytes": 78485760,
+    "read_calls": 450,
+    "routed_rows": 6976,
+    "seconds": 0.48966984,
+    "work_limit_bytes": 268435456
+  },
+  "phases": [
+    {
+      "phase": "full",
+      "read_bytes": 17115668480,
+      "seconds": 37.507759589,
+      "tokens": 872
+    }
+  ],
+  "prefix_tokens": 58,
+  "scoring_read_bytes": 17115668480,
+  "scoring_seconds": 37.507908347,
+  "tile_checks": [
+    {
+      "max_abs_error": 5.21540641784668e-08,
+      "phase": "full",
+      "relative_l2_error": 2.0133093258400212e-07,
+      "replaced": true,
+      "rows": 872
+    }
+  ],
+  "tile_validation_only": true,
+  "tracing": true
+}

@@ -1,0 +1,758 @@
+[
+  {
+    "name": "norm-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "attn_norm-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Qcur_full-3",
+    "occurrence": 0,
+    "full_shape": [
+      8192,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      8192,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Qcur_reshaped-3",
+    "occurrence": 0,
+    "full_shape": [
+      256,
+      16,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      16,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "norm-3",
+    "occurrence": 1,
+    "full_shape": [
+      256,
+      16,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      16,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Qcur_normed-3",
+    "occurrence": 0,
+    "full_shape": [
+      256,
+      16,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      16,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Qcur-3",
+    "occurrence": 0,
+    "full_shape": [
+      256,
+      16,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      16,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Vcur-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Vcur-3",
+    "occurrence": 1,
+    "full_shape": [
+      256,
+      2,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      2,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Kcur-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "norm-3",
+    "occurrence": 2,
+    "full_shape": [
+      256,
+      2,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      2,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Kcur_normed-3",
+    "occurrence": 0,
+    "full_shape": [
+      256,
+      2,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      2,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "Kcur-3",
+    "occurrence": 1,
+    "full_shape": [
+      256,
+      2,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      2,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "attn_pregate-3",
+    "occurrence": 0,
+    "full_shape": [
+      4096,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      4096,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.012368917465209961,
+    "exact": false
+  },
+  {
+    "name": "gate_reshaped-3",
+    "occurrence": 0,
+    "full_shape": [
+      4096,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      4096,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "gate_sigmoid-3",
+    "occurrence": 0,
+    "full_shape": [
+      4096,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      4096,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0,
+    "exact": true
+  },
+  {
+    "name": "attn_gated-3",
+    "occurrence": 0,
+    "full_shape": [
+      4096,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      4096,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.00046131014823913574,
+    "exact": false
+  },
+  {
+    "name": "attn_output-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.00032391026616096497,
+    "exact": false
+  },
+  {
+    "name": "attn_residual-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.00032389163970947266,
+    "exact": false
+  },
+  {
+    "name": "norm-3",
+    "occurrence": 3,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.007383301854133606,
+    "exact": false
+  },
+  {
+    "name": "attn_post_norm-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.009005606174468994,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_logits-3",
+    "occurrence": 0,
+    "full_shape": [
+      256,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.018436431884765625,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_probs-3",
+    "occurrence": 0,
+    "full_shape": [
+      256,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      256,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.001101084053516388,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_weights-3",
+    "occurrence": 0,
+    "full_shape": [
+      1,
+      8,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      1,
+      8,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.001101084053516388,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_weights_sum-3",
+    "occurrence": 0,
+    "full_shape": [
+      1,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      1,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0010834932327270508,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_weights_sum_clamped-3",
+    "occurrence": 0,
+    "full_shape": [
+      1,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      1,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0010834932327270508,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_weights_norm-3",
+    "occurrence": 0,
+    "full_shape": [
+      8,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      8,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.003630608320236206,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_gate-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      8,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      8,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.01745617389678955,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_up-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      8,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      8,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.01076972484588623,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_swiglu-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      8,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      8,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.008493304252624512,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_down-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      8,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      8,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0023086294531822205,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_weighted-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      8,
+      104,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      8,
+      58,
+      1
+    ],
+    "prefix_max_abs": 0.0010819584131240845,
+    "exact": false
+  },
+  {
+    "name": "ffn_moe_out-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0010923687368631363,
+    "exact": false
+  },
+  {
+    "name": "ffn_gate-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.021769046783447266,
+    "exact": false
+  },
+  {
+    "name": "ffn_up-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.014176011085510254,
+    "exact": false
+  },
+  {
+    "name": "ffn_swiglu-3",
+    "occurrence": 0,
+    "full_shape": [
+      512,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      512,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.02185797691345215,
+    "exact": false
+  },
+  {
+    "name": "ffn_shexp-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.012138128280639648,
+    "exact": false
+  },
+  {
+    "name": "shared_expert_gate-3",
+    "occurrence": 0,
+    "full_shape": [
+      1,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      1,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0015025138854980469,
+    "exact": false
+  },
+  {
+    "name": "shared_expert_gate_sigmoid-3",
+    "occurrence": 0,
+    "full_shape": [
+      1,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      1,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0001662522554397583,
+    "exact": false
+  },
+  {
+    "name": "ffn_shexp_gated-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0014630556106567383,
+    "exact": false
+  },
+  {
+    "name": "ffn_out-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.0015088021755218506,
+    "exact": false
+  },
+  {
+    "name": "l_out-3",
+    "occurrence": 0,
+    "full_shape": [
+      2048,
+      104,
+      1,
+      1
+    ],
+    "prefix_shape": [
+      2048,
+      58,
+      1,
+      1
+    ],
+    "prefix_max_abs": 0.001349806785583496,
+    "exact": false
+  }
+]

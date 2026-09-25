@@ -1,0 +1,49 @@
+{
+  "command": [
+    "env",
+    "OPENBLAS_NUM_THREADS=6",
+    "OMP_NUM_THREADS=6",
+    "semif/.venv/bin/python",
+    "scripts/resumable/tiles.py",
+    "replay",
+    "--model",
+    "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+    "--pack",
+    "results/resumable-20260925/pack",
+    "--trace",
+    "results/resumable-20260925/full-trace/routes.jsonl",
+    "--phase",
+    "full",
+    "--decoder",
+    "results/resumable-20260925/dequant.so",
+    "--schedule",
+    "separate",
+    "--representation",
+    "tiles",
+    "--output",
+    "results/resumable-20260925/layer-separate-tiles.json"
+  ],
+  "wall_seconds": 3.1325044269906357,
+  "exit_code": 0,
+  "process_tree_read_bytes": 962592768,
+  "memory_max": 8589934592,
+  "memory_peak": 223440896,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": [
+    {
+      "path": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+      "cached_bytes": 0
+    },
+    {
+      "path": "results/resumable-20260925/pack/weights.bin",
+      "cached_bytes": 0
+    }
+  ]
+}

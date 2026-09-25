@@ -1,0 +1,37 @@
+{
+  "comparison_to_nonflash_full": {
+    "flips": [],
+    "max_probability_drift": 0.0,
+    "max_logit_drift": 0.0
+  },
+  "native_tiles": {
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 681246720,
+    "expert_visits": 385,
+    "peak_accounted_work_bytes": 54107392,
+    "preserve_down_reduction": true,
+    "read_calls": 770,
+    "routed_rows": 3728,
+    "seconds": 1.77714923,
+    "work_limit_bytes": 268435456
+  },
+  "tile_checks": [
+    {
+      "max_abs_error": 0.0,
+      "phase": "prefix",
+      "relative_l2_error": 0.0,
+      "replaced": true,
+      "rows": 58
+    },
+    {
+      "max_abs_error": 0.0,
+      "phase": "suffix",
+      "relative_l2_error": 0.0,
+      "replaced": true,
+      "rows": 408
+    }
+  ],
+  "snapshot_bytes": 67053944,
+  "snapshot_and_branch_seconds": 0.117771229,
+  "scoring_seconds": 35.927546288
+}

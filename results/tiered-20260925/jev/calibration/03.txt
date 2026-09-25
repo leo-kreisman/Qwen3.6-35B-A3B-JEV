@@ -1,0 +1,9 @@
+<|im_start|>system
+Apply the supplied criterion to the supplied evidence. Choose exactly one listed option. Respond with only its uppercase letter, with no explanation or reasoning.<|im_end|>
+<|im_start|>user
+{"evidence": "Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.", "criterion": "Is the trip type control already in the state the goal requires?", "options": [{"letter": "A", "description": "Yes, 'One way' is the selected trip type."}, {"letter": "B", "description": "No, the control is not in the required state."}]}<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

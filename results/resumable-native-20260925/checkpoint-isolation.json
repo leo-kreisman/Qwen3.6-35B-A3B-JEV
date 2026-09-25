@@ -1,0 +1,80 @@
+{
+  "isolation": {
+    "full_vs_split": {
+      "flips": [
+        "holdout-0"
+      ],
+      "max_probability_drift": 0.38687709303573714,
+      "max_logit_drift": 1.0383434295654297
+    },
+    "split_vs_restore": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "full_answer": [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.928180694580078,
+          21.837223052978516
+        ],
+        "probabilities": [
+          0.5227237458770636,
+          0.47727625412293645
+        ]
+      }
+    ],
+    "split_answer": [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.02534294128418,
+          22.875566482543945
+        ],
+        "probabilities": [
+          0.1358466528413265,
+          0.8641533471586735
+        ]
+      }
+    ]
+  },
+  "no-flash": {
+    "full_vs_split": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "split_vs_restore": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "full_answer": [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.375932693481445,
+          22.332195281982422
+        ],
+        "probabilities": [
+          0.27762711057082945,
+          0.7223728894291704
+        ]
+      }
+    ],
+    "split_answer": [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.375932693481445,
+          22.332195281982422
+        ],
+        "probabilities": [
+          0.27762711057082945,
+          0.7223728894291704
+        ]
+      }
+    ]
+  }
+}

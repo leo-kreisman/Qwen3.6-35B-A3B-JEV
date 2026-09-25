@@ -1,0 +1,97 @@
+{
+  "full": {
+    "comparison": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "native_tiles": {
+      "decoded_weight_bytes": 0,
+      "direct_read_bytes": 962592768,
+      "expert_visits": 544,
+      "peak_accounted_work_bytes": 109737472,
+      "preserve_down_reduction": true,
+      "read_calls": 1088,
+      "routed_rows": 7264,
+      "seconds": 0.7643112080000001,
+      "work_limit_bytes": 268435456
+    },
+    "tile_checks": [
+      {
+        "max_abs_error": 0.0,
+        "phase": "full",
+        "relative_l2_error": 0.0,
+        "replaced": true,
+        "rows": 848
+      },
+      {
+        "max_abs_error": 0.0,
+        "phase": "full",
+        "relative_l2_error": 0.0,
+        "replaced": true,
+        "rows": 38
+      },
+      {
+        "max_abs_error": 0.0,
+        "phase": "full",
+        "relative_l2_error": 0.0,
+        "replaced": true,
+        "rows": 22
+      }
+    ]
+  },
+  "full-padded": {
+    "comparison": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "native_tiles": {
+      "decoded_weight_bytes": 0,
+      "direct_read_bytes": 445906944,
+      "expert_visits": 252,
+      "peak_accounted_work_bytes": 130472320,
+      "preserve_down_reduction": true,
+      "read_calls": 504,
+      "routed_rows": 8096,
+      "seconds": 0.554272231,
+      "work_limit_bytes": 268435456
+    },
+    "tile_checks": [
+      {
+        "max_abs_error": 0.0,
+        "phase": "full",
+        "relative_l2_error": 0.0,
+        "replaced": true,
+        "rows": 1012
+      }
+    ]
+  },
+  "challenge": {
+    "comparison": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "native_tiles": {
+      "decoded_weight_bytes": 0,
+      "direct_read_bytes": 398131200,
+      "expert_visits": 225,
+      "peak_accounted_work_bytes": 112771840,
+      "preserve_down_reduction": true,
+      "read_calls": 450,
+      "routed_rows": 6976,
+      "seconds": 0.508165402,
+      "work_limit_bytes": 268435456
+    },
+    "tile_checks": [
+      {
+        "max_abs_error": 0.0,
+        "phase": "full",
+        "relative_l2_error": 0.0,
+        "replaced": true,
+        "rows": 872
+      }
+    ]
+  }
+}

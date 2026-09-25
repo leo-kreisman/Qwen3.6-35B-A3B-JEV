@@ -1,0 +1,31 @@
+Test project /home/scribe/Projects/JEV_experiment/vendor/BigMoeOnEdge/build
+      Start  1: chat_parse
+ 1/13 Test  #1: chat_parse .......................   Passed    0.01 sec
+      Start  2: think_control
+ 2/13 Test  #2: think_control ....................   Passed    0.04 sec
+      Start  3: config_validate
+ 3/13 Test  #3: config_validate ..................   Passed    0.00 sec
+      Start  4: mapping_release
+ 4/13 Test  #4: mapping_release ..................   Passed    0.00 sec
+      Start  5: ngram_draft
+ 5/13 Test  #5: ngram_draft ......................   Passed    0.00 sec
+      Start  6: stall_union
+ 6/13 Test  #6: stall_union ......................   Passed    0.00 sec
+      Start  7: csv_summary
+ 7/13 Test  #7: csv_summary ......................   Passed    0.00 sec
+      Start  8: moe_make_tiny_model_qwen3moe
+ 8/13 Test  #8: moe_make_tiny_model_qwen3moe .....   Passed    0.54 sec
+      Start  9: moe_gates_qwen3moe
+ 9/13 Test  #9: moe_gates_qwen3moe ...............   Passed    2.37 sec
+      Start 10: moe_make_tiny_model_gemma4
+10/13 Test #10: moe_make_tiny_model_gemma4 .......   Passed    0.60 sec
+      Start 11: moe_gates_gemma4
+11/13 Test #11: moe_gates_gemma4 .................   Passed    1.53 sec
+      Start 12: moe_make_tiny_model_split
+12/13 Test #12: moe_make_tiny_model_split ........   Passed    0.58 sec
+      Start 13: moe_gates_split
+13/13 Test #13: moe_gates_split ..................   Passed    2.45 sec
+
+100% tests passed out of 13
+
+Total Test time (real) =   8.13 sec

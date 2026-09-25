@@ -1,0 +1,423 @@
+{
+  "serial": {
+    "relative_to_serial": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "correct": 8,
+    "total": 8,
+    "answers": [
+      {
+        "id": "holdout-0",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.5227237458770636,
+          0.47727625412293645
+        ]
+      },
+      {
+        "id": "holdout-1",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999426346192148,
+          5.7365380785227105e-05
+        ]
+      },
+      {
+        "id": "holdout-2",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          6.554190665829402e-05,
+          0.9999344580933418
+        ]
+      },
+      {
+        "id": "holdout-3",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          7.380379179356425e-05,
+          0.9999261962082066
+        ]
+      },
+      {
+        "id": "holdout-4",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.0006582571999681639,
+          0.9993417428000319
+        ]
+      },
+      {
+        "id": "holdout-5",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999884336528285,
+          1.1566347171607345e-05
+        ]
+      },
+      {
+        "id": "holdout-6",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999906111761576,
+          9.38882384226039e-06
+        ]
+      },
+      {
+        "id": "holdout-7",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.0003019042408381502,
+          0.9996980957591619
+        ]
+      }
+    ]
+  },
+  "full-padded": {
+    "relative_to_serial": {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    },
+    "correct": 8,
+    "total": 8,
+    "answers": [
+      {
+        "id": "holdout-0",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.5227237458770636,
+          0.47727625412293645
+        ]
+      },
+      {
+        "id": "holdout-1",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999426346192148,
+          5.7365380785227105e-05
+        ]
+      },
+      {
+        "id": "holdout-2",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          6.554190665829402e-05,
+          0.9999344580933418
+        ]
+      },
+      {
+        "id": "holdout-3",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          7.380379179356425e-05,
+          0.9999261962082066
+        ]
+      },
+      {
+        "id": "holdout-4",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.0006582571999681639,
+          0.9993417428000319
+        ]
+      },
+      {
+        "id": "holdout-5",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999884336528285,
+          1.1566347171607345e-05
+        ]
+      },
+      {
+        "id": "holdout-6",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999906111761576,
+          9.38882384226039e-06
+        ]
+      },
+      {
+        "id": "holdout-7",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.0003019042408381502,
+          0.9996980957591619
+        ]
+      }
+    ]
+  },
+  "shared-padded": {
+    "relative_to_serial": {
+      "flips": [
+        "holdout-0"
+      ],
+      "max_probability_drift": 0.38687709303573714,
+      "max_logit_drift": 1.4160289764404297
+    },
+    "correct": 7,
+    "total": 8,
+    "answers": [
+      {
+        "id": "holdout-0",
+        "expected": "yes",
+        "selected": "no",
+        "probabilities": [
+          0.1358466528413265,
+          0.8641533471586735
+        ]
+      },
+      {
+        "id": "holdout-1",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999803331691671,
+          1.966683083282171e-05
+        ]
+      },
+      {
+        "id": "holdout-2",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          7.147829046781923e-05,
+          0.9999285217095322
+        ]
+      },
+      {
+        "id": "holdout-3",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          4.2088453136792365e-05,
+          0.9999579115468633
+        ]
+      },
+      {
+        "id": "holdout-4",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.0013211211190454432,
+          0.9986788788809546
+        ]
+      },
+      {
+        "id": "holdout-5",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999917532469212,
+          8.246753078697459e-06
+        ]
+      },
+      {
+        "id": "holdout-6",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999654771048154,
+          3.452289518455889e-05
+        ]
+      },
+      {
+        "id": "holdout-7",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.00012386046016816358,
+          0.9998761395398318
+        ]
+      }
+    ]
+  },
+  "full": {
+    "relative_to_serial": {
+      "flips": [
+        "holdout-0"
+      ],
+      "max_probability_drift": 0.0887352531986868,
+      "max_logit_drift": 1.0135154724121094
+    },
+    "correct": 7,
+    "total": 8,
+    "answers": [
+      {
+        "id": "holdout-0",
+        "expected": "yes",
+        "selected": "no",
+        "probabilities": [
+          0.4339884926783768,
+          0.5660115073216232
+        ]
+      },
+      {
+        "id": "holdout-1",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999695604787194,
+          3.0439521280539727e-05
+        ]
+      },
+      {
+        "id": "holdout-2",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          6.554190665829402e-05,
+          0.9999344580933418
+        ]
+      },
+      {
+        "id": "holdout-3",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.00010709660967102655,
+          0.9998929033903291
+        ]
+      },
+      {
+        "id": "holdout-4",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.00054528391379869,
+          0.9994547160862014
+        ]
+      },
+      {
+        "id": "holdout-5",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999834704369681,
+          1.652956303185279e-05
+        ]
+      },
+      {
+        "id": "holdout-6",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999844719858652,
+          1.552801413485335e-05
+        ]
+      },
+      {
+        "id": "holdout-7",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.00021537982133367997,
+          0.9997846201786663
+        ]
+      }
+    ]
+  },
+  "shared": {
+    "relative_to_serial": {
+      "flips": [
+        "holdout-0"
+      ],
+      "max_probability_drift": 0.38687709303573714,
+      "max_logit_drift": 1.4160289764404297
+    },
+    "correct": 7,
+    "total": 8,
+    "answers": [
+      {
+        "id": "holdout-0",
+        "expected": "yes",
+        "selected": "no",
+        "probabilities": [
+          0.1358466528413265,
+          0.8641533471586735
+        ]
+      },
+      {
+        "id": "holdout-1",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999803331691671,
+          1.966683083282171e-05
+        ]
+      },
+      {
+        "id": "holdout-2",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          7.147829046781923e-05,
+          0.9999285217095322
+        ]
+      },
+      {
+        "id": "holdout-3",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          4.2088453136792365e-05,
+          0.9999579115468633
+        ]
+      },
+      {
+        "id": "holdout-4",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.0013211211190454432,
+          0.9986788788809546
+        ]
+      },
+      {
+        "id": "holdout-5",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999917532469212,
+          8.246753078697459e-06
+        ]
+      },
+      {
+        "id": "holdout-6",
+        "expected": "yes",
+        "selected": "yes",
+        "probabilities": [
+          0.9999654771048154,
+          3.452289518455889e-05
+        ]
+      },
+      {
+        "id": "holdout-7",
+        "expected": "no",
+        "selected": "no",
+        "probabilities": [
+          0.00012386046016816358,
+          0.9998761395398318
+        ]
+      }
+    ]
+  }
+}

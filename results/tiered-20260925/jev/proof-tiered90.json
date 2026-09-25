@@ -1,0 +1,41 @@
+{
+  "command": [
+    "vendor/BigMoeOnEdge/build/cli/bmoe-cli",
+    "-m",
+    "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+    "--tiered-pack",
+    "/home/scribe/models/jev-pack/jev-cold90.tier",
+    "--moe-stream",
+    "--dense-weights",
+    "anon",
+    "--cache-mb",
+    "3000",
+    "--io-threads",
+    "4",
+    "-t",
+    "6",
+    "-c",
+    "256",
+    "--ubatch",
+    "256",
+    "--ppl-list",
+    "results/tiered-20260925/jev/proof.list",
+    "--ppl-choices",
+    "A,B",
+    "--choices-only"
+  ],
+  "wall_seconds": 27.42672236598446,
+  "exit_code": 0,
+  "process_tree_read_bytes": 36641193984,
+  "memory_max": 8589934592,
+  "memory_peak": 8589934592,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 9138,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": []
+}

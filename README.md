@@ -1,5 +1,13 @@
 # Qwen3.6-35B-A3B-JEV
 
+Follow-up: [native quantized executable tiles](docs/RESUMABLE-NATIVE-TILES-RESULT.md) now feed live model evaluation under a strict output-equality gate; checkpoint and segmented-attention behavior are tested separately.
+
+2026-09-25 experiment: [resumable CPU decisions and executable SSD tiles](docs/RESUMABLE-DECISION-RESULT.md). Native schedule tests reduce repeated reads; lossless tiles are implemented. Numerical decision changes keep scheduling experimental.
+
+2026-09-25 experiment: [profile-guided tiered expert storage](docs/TIERED-STORAGE-RESULT.md)
+is implemented and tested. It saved reads but failed the quality gate without a
+measurable latency gain, so it remains opt-in.
+
 Running **Qwen3.6-35B-A3B** as a JEV-style **typed-decision scorer** with its
 expert weights served from **SSD** instead of resident RAM — on a machine that
 cannot hold the checkpoint, via llama.cpp (no Apple Silicon lock-in).

@@ -1,0 +1,9 @@
+<|im_start|>system
+Classify the support ticket. Reply with exactly one letter: A billing, B technical, C account, D fraud, E general.<|im_end|>
+<|im_start|>user
+What is the difference between your service plans?<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

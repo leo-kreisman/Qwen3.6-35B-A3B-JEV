@@ -1,0 +1,74 @@
+[
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/00.txt",
+    "text": "I cancelled last month but you billed me again.",
+    "label": "billing",
+    "answer": "A"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/01.txt",
+    "text": "My payment succeeded but the receipt download fails.",
+    "label": "technical",
+    "answer": "B"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/02.txt",
+    "text": "Please update my surname after my marriage.",
+    "label": "account",
+    "answer": "C"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/03.txt",
+    "text": "A stranger changed my recovery phone number.",
+    "label": "fraud",
+    "answer": "D"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/04.txt",
+    "text": "Do you offer support in Portuguese?",
+    "label": "general",
+    "answer": "E"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/05.txt",
+    "text": "The yearly subscription price is wrong on my invoice.",
+    "label": "billing",
+    "answer": "A"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/06.txt",
+    "text": "Notifications stopped working after the update.",
+    "label": "technical",
+    "answer": "B"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/07.txt",
+    "text": "I need to close my own profile permanently.",
+    "label": "account",
+    "answer": "C"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/08.txt",
+    "text": "I clicked a fake bank link and entered my password.",
+    "label": "fraud",
+    "answer": "D"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/09.txt",
+    "text": "What is the difference between your service plans?",
+    "label": "general",
+    "answer": "E"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/10.txt",
+    "text": "I recognize the purchase but the charged amount is doubled.",
+    "label": "billing",
+    "answer": "A"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/validation/11.txt",
+    "text": "I can log in, but uploading a photo freezes the browser.",
+    "label": "technical",
+    "answer": "B"
+  }
+]

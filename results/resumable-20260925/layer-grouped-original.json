@@ -1,0 +1,14 @@
+{
+  "schedule": "grouped",
+  "representation": "original",
+  "seconds": 1.441125354001997,
+  "logical_read_bytes": 445906944,
+  "read_calls": 756,
+  "decoded_weight_bytes_peak": 12582912,
+  "direct_read_bytes": 449003520,
+  "io_buffer_bytes": 593920,
+  "input_bytes": 7467392,
+  "output_bytes": 59506688,
+  "rows": 908,
+  "note": "one routed layer; float32 dequantized reference; no gate-weighted merge or end-to-end speed claim"
+}

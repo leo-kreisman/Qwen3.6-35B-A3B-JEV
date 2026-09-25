@@ -1,0 +1,9 @@
+<|im_start|>system
+Apply the supplied criterion to the supplied evidence. Choose exactly one listed option. Respond with only its uppercase letter, with no explanation or reasoning.<|im_end|>
+<|im_start|>user
+{"evidence": "Page: Google Flights (one-way search form). Observed elements: [0] input 'Where from?' value 'Zürich'; [1] input 'Where to?' value ''; [2] button 'Departure' value 'Sat, Oct 18'; [3] button 'Search'; [4] link 'One way' state 'selected'. Goal: one-way Zürich to London on 2026-10-20.", "criterion": "Which observed element should receive the destination value 'London'?", "options": [{"letter": "A", "description": "Element 0, the origin input, which already holds Zürich."}, {"letter": "B", "description": "Element 1, the destination input, which is currently empty."}, {"letter": "C", "description": "Element 2, the departure date control."}, {"letter": "D", "description": "Element 3, the search control."}]}<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+

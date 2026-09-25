@@ -1,0 +1,74 @@
+[
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/00.txt",
+    "text": "My card was charged twice for the same purchase.",
+    "label": "billing",
+    "answer": "A"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/01.txt",
+    "text": "The app crashes when I open settings.",
+    "label": "technical",
+    "answer": "B"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/02.txt",
+    "text": "I forgot my password and cannot sign in.",
+    "label": "account",
+    "answer": "C"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/03.txt",
+    "text": "Someone used my card without permission.",
+    "label": "fraud",
+    "answer": "D"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/04.txt",
+    "text": "When does your support desk open?",
+    "label": "general",
+    "answer": "E"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/05.txt",
+    "text": "Please refund the duplicate monthly fee.",
+    "label": "billing",
+    "answer": "A"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/06.txt",
+    "text": "The export button gives an error.",
+    "label": "technical",
+    "answer": "B"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/07.txt",
+    "text": "Change the email address on my profile.",
+    "label": "account",
+    "answer": "C"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/08.txt",
+    "text": "I received a suspicious login alert.",
+    "label": "fraud",
+    "answer": "D"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/09.txt",
+    "text": "Where can I read the user guide?",
+    "label": "general",
+    "answer": "E"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/10.txt",
+    "text": "The invoice tax amount is incorrect.",
+    "label": "billing",
+    "answer": "A"
+  },
+  {
+    "path": "/home/scribe/Projects/JEV_experiment/results/tiered-20260925/calibration/11.txt",
+    "text": "The screen stays blank after an update.",
+    "label": "technical",
+    "answer": "B"
+  }
+]

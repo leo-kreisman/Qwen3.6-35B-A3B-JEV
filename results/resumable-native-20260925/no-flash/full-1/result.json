@@ -1,0 +1,34 @@
+{
+  "answers": [
+    {
+      "id": "holdout-0",
+      "logits": [
+        21.375932693481445,
+        22.332195281982422
+      ],
+      "probabilities": [
+        0.27762711057082945,
+        0.7223728894291704
+      ]
+    }
+  ],
+  "branches": 1,
+  "flash_attention": "disabled",
+  "load_read_bytes": 20377772032,
+  "load_seconds": 12.098505472,
+  "mode": "full",
+  "n_ctx": 4096,
+  "n_ubatch": 1024,
+  "phases": [
+    {
+      "phase": "full",
+      "read_bytes": 15035990016,
+      "seconds": 12.438831216,
+      "tokens": 104
+    }
+  ],
+  "prefix_tokens": 58,
+  "scoring_read_bytes": 15035990016,
+  "scoring_seconds": 12.43889955,
+  "tracing": false
+}

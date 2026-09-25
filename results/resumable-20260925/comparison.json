@@ -1,0 +1,104 @@
+{
+  "full": {
+    "runs": 3,
+    "median_scoring_seconds": 58.751269165,
+    "median_scoring_read_bytes": 40279859200,
+    "measurements": [
+      {
+        "name": "full-1",
+        "seconds": 48.032095009,
+        "read_bytes": 39995740160,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      },
+      {
+        "name": "full-2",
+        "seconds": 58.751269165,
+        "read_bytes": 40317624320,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      },
+      {
+        "name": "full-3",
+        "seconds": 59.979283842,
+        "read_bytes": 40279859200,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      }
+    ]
+  },
+  "full-padded": {
+    "runs": 3,
+    "median_scoring_seconds": 41.675133021,
+    "median_scoring_read_bytes": 18114048000,
+    "measurements": [
+      {
+        "name": "full-padded-1",
+        "seconds": 39.008257804,
+        "read_bytes": 18094149632,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 1.2348536730044657e-05,
+        "max_logit_drift": 0.8748855590820312
+      },
+      {
+        "name": "full-padded-2",
+        "seconds": 41.675133021,
+        "read_bytes": 18114048000,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 1.2348536730044657e-05,
+        "max_logit_drift": 0.8748855590820312
+      },
+      {
+        "name": "full-padded-3",
+        "seconds": 46.583302167,
+        "read_bytes": 18130853888,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 1.2348536730044657e-05,
+        "max_logit_drift": 0.8748855590820312
+      }
+    ]
+  },
+  "shared-padded": {
+    "runs": 3,
+    "median_scoring_seconds": 43.518510316,
+    "median_scoring_read_bytes": 32510849024,
+    "measurements": [
+      {
+        "name": "shared-padded-1",
+        "seconds": 35.06955613,
+        "read_bytes": 32448307200,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 1.2348536730044657e-05,
+        "max_logit_drift": 0.8748855590820312
+      },
+      {
+        "name": "shared-padded-2",
+        "seconds": 43.518510316,
+        "read_bytes": 32510849024,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 1.2348536730044657e-05,
+        "max_logit_drift": 0.8748855590820312
+      },
+      {
+        "name": "shared-padded-3",
+        "seconds": 43.648415219,
+        "read_bytes": 32522387456,
+        "peak": 8589934592,
+        "flips": [],
+        "max_probability_drift": 1.2348536730044657e-05,
+        "max_logit_drift": 0.8748855590820312
+      }
+    ]
+  }
+}

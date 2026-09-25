@@ -1,0 +1,19 @@
+{
+  "format": "jev-native-execution-contract-v1",
+  "scope": "layer-zero validation; not a model-wide deployment manifest",
+  "pack_sha256": "ed875a4e8cb9b5ab9a973e37936ee9e0cd3d9ec83562f28120aa32e862fc09c1",
+  "ready_input": "normalized F32 rows and actual expert route IDs",
+  "grouping": "all currently ready rows by expert, output scatter in original row/route order",
+  "weight_format": "unaltered quantized K blocks",
+  "activation": "GGML native SIMD SwiGLU via public graph API",
+  "down_reduction": "stage quantized columns and full intermediate; original native reduction length",
+  "admission_budget_bytes": 268435456,
+  "resident_continuation": [
+    "quantized input rows",
+    "current expert intermediate coordinates",
+    "current expert quantized down columns",
+    "output rows"
+  ],
+  "replacement_gate": "finite outputs and zero absolute difference against native layer",
+  "attention_for_checkpoint_consistency": "explicit non-flash diagnostic input; not a service default"
+}

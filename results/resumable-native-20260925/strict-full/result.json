@@ -1,0 +1,105 @@
+{
+  "answers": [
+    {
+      "id": "c1-destination",
+      "logits": [
+        18.715288162231445,
+        29.929418563842773,
+        17.05156707763672,
+        15.276593208312988
+      ],
+      "probabilities": [
+        1.3482110887983233e-05,
+        0.9999835310712967,
+        2.5539536327642956e-06,
+        4.328641824286342e-07
+      ]
+    },
+    {
+      "id": "c2-date-matches",
+      "logits": [
+        18.75757598876953,
+        28.609586715698242
+      ],
+      "probabilities": [
+        5.263846841750762e-05,
+        0.9999473615315825
+      ]
+    },
+    {
+      "id": "c3-origin-correct",
+      "logits": [
+        29.024005889892578,
+        17.427082061767578
+      ],
+      "probabilities": [
+        0.9999908057569243,
+        9.194243075747238e-06
+      ]
+    },
+    {
+      "id": "c4-oneway-active",
+      "logits": [
+        27.871150970458984,
+        16.357118606567383
+      ],
+      "probabilities": [
+        0.9999900111626433,
+        9.988837356784265e-06
+      ]
+    }
+  ],
+  "branches": 4,
+  "load_read_bytes": 20377706496,
+  "load_seconds": 12.421689803,
+  "mode": "full",
+  "n_ctx": 4096,
+  "n_ubatch": 1024,
+  "native_tiles": {
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 962592768,
+    "expert_visits": 544,
+    "peak_accounted_work_bytes": 109737472,
+    "preserve_down_reduction": true,
+    "read_calls": 1088,
+    "routed_rows": 7264,
+    "seconds": 0.7643112080000001,
+    "work_limit_bytes": 268435456
+  },
+  "phases": [
+    {
+      "phase": "full",
+      "read_bytes": 41074708480,
+      "seconds": 49.002121887,
+      "tokens": 908
+    }
+  ],
+  "prefix_tokens": 141,
+  "scoring_read_bytes": 41074708480,
+  "scoring_seconds": 49.002553567,
+  "tile_checks": [
+    {
+      "max_abs_error": 0.0,
+      "phase": "full",
+      "relative_l2_error": 0.0,
+      "replaced": true,
+      "rows": 848
+    },
+    {
+      "max_abs_error": 0.0,
+      "phase": "full",
+      "relative_l2_error": 0.0,
+      "replaced": true,
+      "rows": 38
+    },
+    {
+      "max_abs_error": 0.0,
+      "phase": "full",
+      "relative_l2_error": 0.0,
+      "replaced": true,
+      "rows": 22
+    }
+  ],
+  "tile_validation_only": true,
+  "tracing": true
+}
