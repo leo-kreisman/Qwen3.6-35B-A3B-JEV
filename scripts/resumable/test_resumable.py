@@ -5,9 +5,17 @@ from pathlib import Path
 import numpy as np
 from tiles import slice_tile, BLOCK, DirectReader
 from simulate import lru
+from analyze import compare
 
 
 class BundleTests(unittest.TestCase):
+    def test_comparison_rejects_incomplete_or_nonfinite_results(self):
+        good={'answers':[{'id':'x','probabilities':[0.6,0.4],'logits':[1.0,0.0]}]}
+        for logits in ([1.0], [float('nan'),0.0], [float('inf'),0.0]):
+            bad={'answers':[{'id':'x','probabilities':[0.6,0.4],'logits':logits}]}
+            with self.assertRaises(ValueError):compare(good,bad)
+        with self.assertRaises(ValueError):compare(good,{'answers':good['answers']*2})
+
     def test_direct_unaligned_request_returns_exact_bytes(self):
         data=bytes(range(256))*32
         with tempfile.TemporaryDirectory() as d:

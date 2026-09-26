@@ -1,0 +1,37 @@
+{
+  "command": [
+    "results/resumable-performance-20260926/control-probe",
+    "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+    "results/resumable-performance-20260926/timing/input.json",
+    "results/resumable-performance-20260926/timing/1-control",
+    "full-padded",
+    "-1",
+    "6",
+    "results/resumable-20260925/pack",
+    "bypass",
+    "staged"
+  ],
+  "wall_seconds": 47.817802008008584,
+  "exit_code": 0,
+  "process_tree_read_bytes": 38459379712,
+  "memory_max": 8589934592,
+  "memory_peak": 8589934592,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 16967,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": [
+    {
+      "path": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+      "cached_bytes": 0
+    },
+    {
+      "path": "results/resumable-20260925/pack/weights.bin",
+      "cached_bytes": 0
+    }
+  ]
+}

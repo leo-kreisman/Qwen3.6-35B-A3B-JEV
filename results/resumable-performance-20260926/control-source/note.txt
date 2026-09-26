@@ -1,0 +1,1 @@
+NativeTiles reconstructed from HEAD plus existing model-path/type accessors; SHA256 verified against pre-edit 2026-09-26 static audit. Probe is P1 source minus validation-only diagnostics rejection, matching control build.

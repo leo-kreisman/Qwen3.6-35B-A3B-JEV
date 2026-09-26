@@ -53,3 +53,8 @@ INVALID-*.jsonl
 results/resumable-*/isolation-probe
 results/resumable-*/native-tests
 results/resumable-*/*-probe
+results/resumable-*/*-layer
+results/resumable-*/native-tests-*
+results/resumable-*/test-fixtures*/
+results/resumable-*/unit-fixtures/
+results/resumable-*/unit-final/

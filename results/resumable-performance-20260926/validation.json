@@ -1,0 +1,44 @@
+{
+  "native_checks": 27,
+  "python_tests": 5,
+  "native_and_python_test_exit_code": 0,
+  "test_note": "Observed final native-tests-final and unittest output; not inferred from source.",
+  "guarded_successful_runs": 39,
+  "guard_failures": [],
+  "comparisons_passed": {
+    "timing": true,
+    "layer-padded": true,
+    "layer-fragmented": true,
+    "checkpoint-overlap": true
+  },
+  "source_sha256": {
+    "scripts/resumable/native_tiles.h": "312baeb1d3c44d5c931b3275c03f44f7890eece4141c0d2b2564904c074e4949",
+    "scripts/resumable/native_tile_io.h": "6ef054015ce18edfa99846636a3621203648b6d04641d0d72abad3e4dcb6cf08",
+    "scripts/resumable/native_bypass.h": "9cd74e4044e254bbbe451f51bf13d69fef63e91e6a591237151b7b7ec17707fe",
+    "scripts/resumable/probe.cpp": "61f9d0dd605ce994f69ffc4d33da57497a5f557d586d3a4658efa12b9faf954e",
+    "scripts/resumable/native_benchmark.cpp": "3e77a38c7eaa1fb267fdd9792bd9f6b84faf0ba72857f18c7c27929b444716c7",
+    "scripts/resumable/native_tests.cpp": "a839f495bd9526084dd64f79156111ec6ee5e3529aa6301bf79162bae423b023",
+    "scripts/resumable/dequant.cpp": "8df45442774dca4e2280ace84245d6154af31ac0284dcfe5df80f872db3571ba",
+    "scripts/resumable/tiles.py": "da8420b8b648fa778625ce17380527b2413ad02c4a4ec5490fe01996aba14faa",
+    "scripts/resumable/simulate.py": "a5214c8340d7a09e3f7e5ff8595544b1a894863da62640b8d26914ac15ed2011",
+    "scripts/resumable/prepare.py": "e219d79a9c0d9b181f54814f151ca33761ab149c9cae12b29bd3f2a715c77c49",
+    "scripts/resumable/run_layer_matrix.py": "7a00e493091fd0221f0159e106c170cce025d6f1fc7da100a157fb3e56dc8c8f",
+    "scripts/resumable/run_performance.py": "e78fa185d6d73974b3298c8b45f4d5d394d3901df127f5443f5ede8e3ebe132f",
+    "scripts/resumable/compare_tensors.py": "f67b1587066a41725f3d8d278b5df54a4a330d19f056a91da814d460f92545c3",
+    "scripts/resumable/run_bypass.py": "127c7ac82e408e3b8c4d5535a2e02b6e04999e5911ff1143c68913c55b9ff3f8",
+    "scripts/resumable/analyze.py": "7183e07ea956e43912569798a058fbaeccd4613ef55ffd1639f7ed5a230d8f57",
+    "scripts/resumable/test_resumable.py": "a59b0c76918280c3f7d520c68cf596d7202bc5aefb207a18269bbcda4c715d38",
+    "scripts/resumable/run_matrix.py": "c338245c5a2732359901b088bd41a00915201c10d1cd211e5888f362f3722d7d",
+    "scripts/resumable/build.sh": "1aa76ae543555e9547bf2d30958a93eda6f3cd47cf19870945752f97b065bc8f"
+  },
+  "binaries_sha256": {
+    "overlap-probe": "0a2a8184210cb6cfcfe27514062f590c58fac2ed6f8e10946f9f07f122e766d6",
+    "before-probe": "e1a6095041e517dd8d2639106089e740c26ce373fb698b99b289a84ca8d2b81f",
+    "control-probe": "f1bbedc1adbfa96550ca7455642c06b0dd25d734732ff6f346fbc301b67deff8",
+    "control-layer": "5cf4273be8bc8f650191c14905e8e895ac8eec9ecb5d056fa3cf7c3ad7395075",
+    "native-tests-final": "0bee18b45334439adce581676efc92858b253abbc972f5c7404f577bf56156c5",
+    "candidate-probe": "bc3d8d48e62242fe7ab211dc366b26c5d619fdf1679d0c9501318a71d7e09827",
+    "candidate-layer": "deedd05e4b4d2bffedb061a4beb6f5ed34daa2d6e2135a59afdf7eb862b13e6d"
+  },
+  "git_head": "f120adcc3f8cc24f82613023d7eeb4bbaf3dcaec"
+}

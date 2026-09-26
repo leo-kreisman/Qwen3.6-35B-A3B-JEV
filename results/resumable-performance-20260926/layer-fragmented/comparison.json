@@ -1,0 +1,340 @@
+{
+  "scope": "single-layer saved-input replay, not end-to-end latency",
+  "complete": true,
+  "runs": [
+    {
+      "round": 1,
+      "variant": "control",
+      "median_seconds": 0.775672873,
+      "seconds": [
+        0.775672873,
+        0.742387233,
+        0.788200032
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 150331392,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.253502602,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 1,
+      "variant": "sync",
+      "median_seconds": 0.765581943,
+      "seconds": [
+        0.76640218,
+        0.765581943,
+        0.708346528
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 141242368,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.1339431369999955,
+        "io_wait_seconds": 1.1339431369999955,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.175716038,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 1,
+      "variant": "overlap",
+      "median_seconds": 0.514397938,
+      "seconds": [
+        0.514397938,
+        0.554100615,
+        0.502417169
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 144019456,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.1295808230000002,
+        "io_wait_seconds": 0.41900164800000006,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 127424000,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 1.5140777,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "overlap",
+      "median_seconds": 0.546925218,
+      "seconds": [
+        0.511294336,
+        0.546925218,
+        0.561146606
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 143847424,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.1501676749999998,
+        "io_wait_seconds": 0.423614781,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 127424000,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 1.565503548,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "sync",
+      "median_seconds": 0.746779297,
+      "seconds": [
+        0.746779297,
+        0.776677329,
+        0.723763064
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 140976128,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.1574042129999982,
+        "io_wait_seconds": 1.1574042129999982,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.196021935,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "control",
+      "median_seconds": 0.779900483,
+      "seconds": [
+        0.784385843,
+        0.779900483,
+        0.747967595
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 142839808,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.257685487,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 3,
+      "variant": "control",
+      "median_seconds": 0.750545243,
+      "seconds": [
+        0.750545243,
+        0.775052399,
+        0.727985627
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 142594048,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.198741489,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 3,
+      "variant": "sync",
+      "median_seconds": 0.769929048,
+      "seconds": [
+        0.753612345,
+        0.769929048,
+        0.792046599
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 140787712,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.1363278200000033,
+        "io_wait_seconds": 1.1363278200000033,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.258368855,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 3,
+      "variant": "overlap",
+      "median_seconds": 0.533139894,
+      "seconds": [
+        0.5233585,
+        0.533139894,
+        0.557313879
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 143974400,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.1466297319999994,
+        "io_wait_seconds": 0.42335124600000007,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 127424000,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 1.561455716,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "overlap",
+      "median_seconds": 0.524220803,
+      "seconds": [
+        0.520310173,
+        0.541400271,
+        0.524220803
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 144404480,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.178002819,
+        "io_wait_seconds": 0.4502360429999999,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 127424000,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 1.53683844,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "sync",
+      "median_seconds": 0.771341056,
+      "seconds": [
+        0.74060824,
+        0.771341056,
+        0.781993886
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 140734464,
+      "native_tiles": {
+        "activation_calls": 3264,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "input_quantized_rows": 2724,
+        "io_service_seconds": 1.1170349779999973,
+        "io_wait_seconds": 1.1170349779999973,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.236552671,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "control",
+      "median_seconds": 0.782397048,
+      "seconds": [
+        0.782397048,
+        0.738540569,
+        0.793496599
+      ],
+      "output_sha256": "e273182dd285b596fddecb14757a0513c4d149de389cbf2ca1ebd132fc662cff",
+      "memory_peak": 143085568,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 2887778304,
+        "expert_visits": 1632,
+        "peak_accounted_work_bytes": 109737472,
+        "preserve_down_reduction": true,
+        "read_calls": 3264,
+        "routed_rows": 21792,
+        "seconds": 2.265142692,
+        "work_limit_bytes": 268435456
+      }
+    }
+  ],
+  "binaries": {
+    "control": "5cf4273be8bc8f650191c14905e8e895ac8eec9ecb5d056fa3cf7c3ad7395075",
+    "candidate": "deedd05e4b4d2bffedb061a4beb6f5ed34daa2d6e2135a59afdf7eb862b13e6d"
+  },
+  "summary": {
+    "control": 0.777786678,
+    "sync": 0.7677554955,
+    "overlap": 0.5286803485
+  },
+  "passed": true
+}

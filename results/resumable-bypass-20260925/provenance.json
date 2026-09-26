@@ -1,0 +1,30 @@
+{
+  "base_commit": "f120adcc3f8cc24f82613023d7eeb4bbaf3dcaec",
+  "files": {
+    "scripts/resumable/tiles.py": "da8420b8b648fa778625ce17380527b2413ad02c4a4ec5490fe01996aba14faa",
+    "scripts/resumable/simulate.py": "a5214c8340d7a09e3f7e5ff8595544b1a894863da62640b8d26914ac15ed2011",
+    "scripts/resumable/native_tiles.h": "6e2086b1bd2351d9281da448e9cffedb81e80cd3b7562b60860a23f26cffc9b9",
+    "scripts/resumable/build.sh": "2f45c8d28f92d3c78dcff14c849039a29137ac523b447d8f325f197b86ff6cd2",
+    "scripts/resumable/prepare.py": "e219d79a9c0d9b181f54814f151ca33761ab149c9cae12b29bd3f2a715c77c49",
+    "scripts/resumable/probe.cpp": "1ec041b32b3340365507ef67e8c95a77f6a86b70704d18bf54e19e27e0e97ab3",
+    "scripts/resumable/compare_tensors.py": "f67b1587066a41725f3d8d278b5df54a4a330d19f056a91da814d460f92545c3",
+    "scripts/resumable/native_bypass.h": "9cd74e4044e254bbbe451f51bf13d69fef63e91e6a591237151b7b7ec17707fe",
+    "scripts/resumable/run_bypass.py": "127c7ac82e408e3b8c4d5535a2e02b6e04999e5911ff1143c68913c55b9ff3f8",
+    "scripts/resumable/native_tests.cpp": "25dffa4fa5fa573cbc82d59cfbb82492ecb5d44f38a213682acffa65c7e8a91a",
+    "scripts/resumable/README.md": "820895663ba5ea6467709d0cf98e0d4496a1e3d2e8ba3d7b2febc2f095b67a77",
+    "scripts/resumable/analyze.py": "0ec0e42202207047a9f89cb54c2b81a7af3d519bf31f0976563353ee886774df",
+    "scripts/resumable/test_resumable.py": "d04b5d2b342e7a543c1b9b5e20a588ce6f8069fcfbf4acfd05633e705d852aae",
+    "scripts/resumable/run_matrix.py": "c338245c5a2732359901b088bd41a00915201c10d1cd211e5888f362f3722d7d",
+    "scripts/resumable/dequant.cpp": "8df45442774dca4e2280ace84245d6154af31ac0284dcfe5df80f872db3571ba",
+    "vendor/BigMoeOnEdge/build/bin/libggml-base.so": "486dba6235573a1f442b35d14bd1e53696bc3f4beec03f0acee108662996d184",
+    "vendor/BigMoeOnEdge/build/bin/libllama-common.so": "6eff782735f09bfefaed01ef946764828f61452463cb984140da1c8104aac084",
+    "vendor/BigMoeOnEdge/build/bin/libllama.so": "66f6d4ec0208371571d6fc1bda27597f6d0c6f7890317e41b2226d7e93740a21",
+    "vendor/BigMoeOnEdge/build/bin/libggml.so": "48b7e86ed97e2c7b7f8320a0bc97b6b465f495ae1eb62481f94e46474e27283c",
+    "vendor/BigMoeOnEdge/build/bin/libggml-cpu.so": "9b2b6e9c9eef68e984d306caf40c78ac4e7bf8661c68c4c50506c7e36da80ae9",
+    "results/resumable-bypass-20260925/final-probe": "e1a6095041e517dd8d2639106089e740c26ce373fb698b99b289a84ca8d2b81f",
+    "results/resumable-bypass-20260925/protected-probe": "4204a011ba8454959979a35f8a13b0407e7c0c2b4ca80940d195cda04124fa7a",
+    "results/resumable-bypass-20260925/corrected-probe": "1103da1410e92678dacf9cd22aec8172f900613ff9e409d12ae419482ca9921f",
+    "results/resumable-bypass-20260925/native-tests": "247e7f4374a1c0c57b275e2624e110b0640a478e214b56d8a0bba083ca365481"
+  },
+  "note": "One-layer graph interception, not a supported backend skip API. Engine library hashes pinned."
+}

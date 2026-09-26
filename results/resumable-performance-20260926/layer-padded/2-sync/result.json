@@ -1,0 +1,28 @@
+{
+  "groups": 1,
+  "mode": "sync",
+  "native_tiles": {
+    "activation_calls": 1512,
+    "activation_graph_builds": 1,
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 1337720832,
+    "expert_visits": 756,
+    "input_quantized_rows": 3036,
+    "io_service_seconds": 0.5256999139999999,
+    "io_wait_seconds": 0.5256999139999999,
+    "overlap_io": false,
+    "peak_accounted_work_bytes": 130472320,
+    "preserve_down_reduction": true,
+    "read_calls": 1512,
+    "routed_rows": 24288,
+    "seconds": 1.4706949569999999,
+    "work_limit_bytes": 268435456
+  },
+  "rounds": 3,
+  "scope": "native single-layer replay; captured readiness; O_DIRECT reads; not end-to-end inference",
+  "seconds": [
+    0.517406703,
+    0.500286832,
+    0.512156164
+  ]
+}

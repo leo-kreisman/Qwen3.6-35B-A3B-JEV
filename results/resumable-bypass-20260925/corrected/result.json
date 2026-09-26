@@ -1,0 +1,225 @@
+{
+  "answers": [
+    {
+      "id": "holdout-0",
+      "logits": [
+        21.928180694580078,
+        21.837223052978516
+      ],
+      "probabilities": [
+        0.5227237458770636,
+        0.47727625412293645
+      ]
+    },
+    {
+      "id": "holdout-1",
+      "logits": [
+        28.25777244567871,
+        18.49176025390625
+      ],
+      "probabilities": [
+        0.9999426346192148,
+        5.7365380785227105e-05
+      ]
+    },
+    {
+      "id": "holdout-2",
+      "logits": [
+        19.45428466796875,
+        29.087039947509766
+      ],
+      "probabilities": [
+        6.554190665829402e-05,
+        0.9999344580933418
+      ]
+    },
+    {
+      "id": "holdout-3",
+      "logits": [
+        19.575281143188477,
+        29.08930778503418
+      ],
+      "probabilities": [
+        7.380379179356425e-05,
+        0.9999261962082066
+      ]
+    },
+    {
+      "id": "holdout-4",
+      "logits": [
+        19.327667236328125,
+        26.652923583984375
+      ],
+      "probabilities": [
+        0.0006582571999681639,
+        0.9993417428000319
+      ]
+    },
+    {
+      "id": "holdout-5",
+      "logits": [
+        27.735248565673828,
+        16.367849349975586
+      ],
+      "probabilities": [
+        0.9999884336528285,
+        1.1566347171607345e-05
+      ]
+    },
+    {
+      "id": "holdout-6",
+      "logits": [
+        28.26578140258789,
+        16.689800262451172
+      ],
+      "probabilities": [
+        0.9999906111761576,
+        9.38882384226039e-06
+      ]
+    },
+    {
+      "id": "holdout-7",
+      "logits": [
+        20.049367904663086,
+        28.15446662902832
+      ],
+      "probabilities": [
+        0.0003019042408381502,
+        0.9996980957591619
+      ]
+    }
+  ],
+  "branches": 8,
+  "flash_attention": "auto",
+  "iterations": [
+    [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.928180694580078,
+          21.837223052978516
+        ],
+        "probabilities": [
+          0.5227237458770636,
+          0.47727625412293645
+        ]
+      },
+      {
+        "id": "holdout-1",
+        "logits": [
+          28.25777244567871,
+          18.49176025390625
+        ],
+        "probabilities": [
+          0.9999426346192148,
+          5.7365380785227105e-05
+        ]
+      },
+      {
+        "id": "holdout-2",
+        "logits": [
+          19.45428466796875,
+          29.087039947509766
+        ],
+        "probabilities": [
+          6.554190665829402e-05,
+          0.9999344580933418
+        ]
+      },
+      {
+        "id": "holdout-3",
+        "logits": [
+          19.575281143188477,
+          29.08930778503418
+        ],
+        "probabilities": [
+          7.380379179356425e-05,
+          0.9999261962082066
+        ]
+      },
+      {
+        "id": "holdout-4",
+        "logits": [
+          19.327667236328125,
+          26.652923583984375
+        ],
+        "probabilities": [
+          0.0006582571999681639,
+          0.9993417428000319
+        ]
+      },
+      {
+        "id": "holdout-5",
+        "logits": [
+          27.735248565673828,
+          16.367849349975586
+        ],
+        "probabilities": [
+          0.9999884336528285,
+          1.1566347171607345e-05
+        ]
+      },
+      {
+        "id": "holdout-6",
+        "logits": [
+          28.26578140258789,
+          16.689800262451172
+        ],
+        "probabilities": [
+          0.9999906111761576,
+          9.38882384226039e-06
+        ]
+      },
+      {
+        "id": "holdout-7",
+        "logits": [
+          20.049367904663086,
+          28.15446662902832
+        ],
+        "probabilities": [
+          0.0003019042408381502,
+          0.9996980957591619
+        ]
+      }
+    ]
+  ],
+  "load_read_bytes": 20366643200,
+  "load_seconds": 12.435767988,
+  "mode": "full-padded",
+  "n_ctx": 4096,
+  "n_ubatch": 1024,
+  "native_bypass": {
+    "experimental_graph_interception": true,
+    "groups": 1,
+    "operators_restored": true,
+    "skipped_activation": 1,
+    "skipped_down": 1,
+    "skipped_gate": 1,
+    "skipped_up": 1
+  },
+  "native_tiles": {
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 398131200,
+    "expert_visits": 225,
+    "peak_accounted_work_bytes": 112771840,
+    "preserve_down_reduction": true,
+    "read_calls": 450,
+    "routed_rows": 6976,
+    "seconds": 0.492273719,
+    "work_limit_bytes": 268435456
+  },
+  "phases": [
+    {
+      "phase": "full",
+      "read_bytes": 16627392512,
+      "seconds": 33.138202529,
+      "tokens": 872
+    }
+  ],
+  "prefix_tokens": 58,
+  "scoring_read_bytes": 16627392512,
+  "scoring_seconds": 33.138335866,
+  "tile_checks": [],
+  "tile_validation_only": false,
+  "tracing": true
+}

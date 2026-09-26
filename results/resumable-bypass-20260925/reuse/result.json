@@ -1,0 +1,110 @@
+{
+  "answers": [
+    {
+      "id": "holdout-0",
+      "logits": [
+        21.928180694580078,
+        21.837223052978516
+      ],
+      "probabilities": [
+        0.5227237458770636,
+        0.47727625412293645
+      ]
+    }
+  ],
+  "branches": 1,
+  "flash_attention": "auto",
+  "iterations": [
+    [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.928180694580078,
+          21.837223052978516
+        ],
+        "probabilities": [
+          0.5227237458770636,
+          0.47727625412293645
+        ]
+      }
+    ],
+    [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.928180694580078,
+          21.837223052978516
+        ],
+        "probabilities": [
+          0.5227237458770636,
+          0.47727625412293645
+        ]
+      }
+    ],
+    [
+      {
+        "id": "holdout-0",
+        "logits": [
+          21.928180694580078,
+          21.837223052978516
+        ],
+        "probabilities": [
+          0.5227237458770636,
+          0.47727625412293645
+        ]
+      }
+    ]
+  ],
+  "load_read_bytes": 20366385152,
+  "load_seconds": 11.713348834,
+  "mode": "full",
+  "n_ctx": 4096,
+  "n_ubatch": 1024,
+  "native_bypass": {
+    "experimental_graph_interception": true,
+    "groups": 3,
+    "operators_restored": true,
+    "protected_original_weight_bytes": 452972544,
+    "skipped_activation": 3,
+    "skipped_down": 3,
+    "skipped_gate": 3,
+    "skipped_up": 3
+  },
+  "native_tiles": {
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 1125384192,
+    "expert_visits": 636,
+    "peak_accounted_work_bytes": 15672064,
+    "preserve_down_reduction": true,
+    "read_calls": 1272,
+    "routed_rows": 2496,
+    "seconds": 0.662976631,
+    "work_limit_bytes": 268435456
+  },
+  "phases": [
+    {
+      "phase": "full",
+      "read_bytes": 15006547968,
+      "seconds": 11.52130522,
+      "tokens": 104
+    },
+    {
+      "phase": "full",
+      "read_bytes": 15009644544,
+      "seconds": 11.106956263,
+      "tokens": 104
+    },
+    {
+      "phase": "full",
+      "read_bytes": 15005888512,
+      "seconds": 11.240119588,
+      "tokens": 104
+    }
+  ],
+  "prefix_tokens": 58,
+  "scoring_read_bytes": 45022081024,
+  "scoring_seconds": 33.878003623,
+  "tile_checks": [],
+  "tile_validation_only": false,
+  "tracing": true
+}

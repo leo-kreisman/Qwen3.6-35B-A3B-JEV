@@ -1,5 +1,9 @@
 # Qwen3.6-35B-A3B-JEV
 
+Latest experiment: [overlapping SSD reads and CPU computation](docs/RESUMABLE-PERFORMANCE-RESULT.md) reduces native tile replay time by about 31% with identical outputs and read bytes. Full-model speedup remains unproven; this is an opt-in, single-layer experiment.
+
+[CPU tile bypass](docs/RESUMABLE-BYPASS-RESULT.md) skips the original expert calculation at one layer and tests exact decisions with original weight pages protected. This is an opt-in, version-sensitive graph experiment.
+
 Follow-up: [native quantized executable tiles](docs/RESUMABLE-NATIVE-TILES-RESULT.md) now feed live model evaluation under a strict output-equality gate; checkpoint and segmented-attention behavior are tested separately.
 
 2026-09-25 experiment: [resumable CPU decisions and executable SSD tiles](docs/RESUMABLE-DECISION-RESULT.md). Native schedule tests reduce repeated reads; lossless tiles are implemented. Numerical decision changes keep scheduling experimental.

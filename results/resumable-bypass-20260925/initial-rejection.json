@@ -1,0 +1,6 @@
+{
+  "exit_code": 1,
+  "reason": "bypass requires contiguous typed inputs; router IDs were a strided view",
+  "accepted_answers": false,
+  "oom_events": 0
+}

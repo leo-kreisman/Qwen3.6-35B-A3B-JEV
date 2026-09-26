@@ -1,0 +1,325 @@
+{
+  "mode": "full-padded",
+  "rounds": 4,
+  "diagnostics": false,
+  "binaries": {
+    "control": {
+      "path": "/home/scribe/Projects/JEV_experiment/results/resumable-performance-20260926/control-probe",
+      "sha256": "f1bbedc1adbfa96550ca7455642c06b0dd25d734732ff6f346fbc301b67deff8"
+    },
+    "candidate": {
+      "path": "/home/scribe/Projects/JEV_experiment/results/resumable-performance-20260926/candidate-probe",
+      "sha256": "bc3d8d48e62242fe7ab211dc366b26c5d619fdf1679d0c9501318a71d7e09827"
+    }
+  },
+  "runs": [
+    {
+      "round": 1,
+      "variant": "baseline",
+      "seconds": 35.172899247,
+      "read_bytes": 18084724736,
+      "memory_peak": 8589934592,
+      "native_tiles": null
+    },
+    {
+      "round": 1,
+      "variant": "control",
+      "seconds": 35.245665553,
+      "read_bytes": 18080342016,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.546777906,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 1,
+      "variant": "candidate",
+      "seconds": 35.435160015,
+      "read_bytes": 18085961728,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "activation_calls": 504,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "input_quantized_rows": 1012,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.488651177,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "candidate",
+      "seconds": 35.097648423,
+      "read_bytes": 18081062912,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "activation_calls": 504,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "input_quantized_rows": 1012,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.526379086,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "control",
+      "seconds": 35.07597407,
+      "read_bytes": 18088214528,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.547739841,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "baseline",
+      "seconds": 35.15779779,
+      "read_bytes": 18107916288,
+      "memory_peak": 8589934592,
+      "native_tiles": null
+    },
+    {
+      "round": 3,
+      "variant": "baseline",
+      "seconds": 35.174585234,
+      "read_bytes": 18097983488,
+      "memory_peak": 8589934592,
+      "native_tiles": null
+    },
+    {
+      "round": 3,
+      "variant": "control",
+      "seconds": 35.254551692,
+      "read_bytes": 18070204416,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.507056269,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 3,
+      "variant": "candidate",
+      "seconds": 34.948580752,
+      "read_bytes": 18089000960,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "activation_calls": 504,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "input_quantized_rows": 1012,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.520623113,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "candidate",
+      "seconds": 34.968628608,
+      "read_bytes": 18086117376,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "activation_calls": 504,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "input_quantized_rows": 1012,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.563896294,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "control",
+      "seconds": 34.826411672,
+      "read_bytes": 18094239744,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 445906944,
+        "expert_visits": 252,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 504,
+        "routed_rows": 8096,
+        "seconds": 0.499160788,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "baseline",
+      "seconds": 34.908919302,
+      "read_bytes": 18093633536,
+      "memory_peak": 8589934592,
+      "native_tiles": null
+    }
+  ],
+  "pairs": [
+    {
+      "round": 1,
+      "variant": "control",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "variant": "candidate",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "variant": "control",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 2,
+      "variant": "candidate",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "variant": "control",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 3,
+      "variant": "candidate",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "variant": "control",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "variant": "candidate",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "caveat": "Only the packed layer is replaced. Timings include callback control overhead; no diagnostic route/tensor logging. Small repeated fixture, not production p95.",
+  "summary": {
+    "baseline": {
+      "median_seconds": 35.1653485185,
+      "median_read_bytes": 18095808512.0
+    },
+    "control": {
+      "median_seconds": 35.160819811500005,
+      "median_read_bytes": 18084278272.0
+    },
+    "candidate": {
+      "median_seconds": 35.0331385155,
+      "median_read_bytes": 18086039552.0
+    }
+  },
+  "paired_candidate_minus_control_seconds": [
+    0.18949446199999898,
+    0.021674353000001645,
+    -0.3059709400000017,
+    0.14221693600000407
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "groups": 3,
+  "mode": "sync",
+  "native_tiles": {
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 2887778304,
+    "expert_visits": 1632,
+    "peak_accounted_work_bytes": 109737472,
+    "preserve_down_reduction": true,
+    "read_calls": 3264,
+    "routed_rows": 21792,
+    "seconds": 2.257685487,
+    "work_limit_bytes": 268435456
+  },
+  "rounds": 3,
+  "scope": "native single-layer replay; captured readiness; O_DIRECT reads; not end-to-end inference",
+  "seconds": [
+    0.784385843,
+    0.779900483,
+    0.747967595
+  ]
+}

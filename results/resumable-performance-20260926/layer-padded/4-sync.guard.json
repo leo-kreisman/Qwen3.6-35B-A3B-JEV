@@ -1,0 +1,29 @@
+{
+  "command": [
+    "results/resumable-performance-20260926/candidate-layer",
+    "results/resumable-20260925/pack",
+    "results/resumable-20260925/full-padded-trace/routes.jsonl",
+    "results/resumable-performance-20260926/layer-padded/4-sync",
+    "3",
+    "sync"
+  ],
+  "wall_seconds": 1.6016930290061282,
+  "exit_code": 0,
+  "process_tree_read_bytes": 1337720832,
+  "memory_max": 8589934592,
+  "memory_peak": 156286976,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": [
+    {
+      "path": "results/resumable-20260925/pack/weights.bin",
+      "cached_bytes": 0
+    }
+  ]
+}

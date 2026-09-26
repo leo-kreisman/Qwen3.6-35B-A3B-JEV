@@ -1,0 +1,28 @@
+{
+  "groups": 3,
+  "mode": "overlap",
+  "native_tiles": {
+    "activation_calls": 3264,
+    "activation_graph_builds": 1,
+    "decoded_weight_bytes": 0,
+    "direct_read_bytes": 2887778304,
+    "expert_visits": 1632,
+    "input_quantized_rows": 2724,
+    "io_service_seconds": 1.178002819,
+    "io_wait_seconds": 0.4502360429999999,
+    "overlap_io": true,
+    "peak_accounted_work_bytes": 127424000,
+    "preserve_down_reduction": true,
+    "read_calls": 3264,
+    "routed_rows": 21792,
+    "seconds": 1.53683844,
+    "work_limit_bytes": 268435456
+  },
+  "rounds": 3,
+  "scope": "native single-layer replay; captured readiness; O_DIRECT reads; not end-to-end inference",
+  "seconds": [
+    0.520310173,
+    0.541400271,
+    0.524220803
+  ]
+}

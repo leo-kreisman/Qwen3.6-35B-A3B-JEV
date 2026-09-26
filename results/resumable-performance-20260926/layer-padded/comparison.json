@@ -1,0 +1,340 @@
+{
+  "scope": "single-layer saved-input replay, not end-to-end latency",
+  "complete": true,
+  "runs": [
+    {
+      "round": 1,
+      "variant": "control",
+      "median_seconds": 0.528641267,
+      "seconds": [
+        0.528641267,
+        0.570220003,
+        0.523500013
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 165646336,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.563105669,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 1,
+      "variant": "sync",
+      "median_seconds": 0.532725157,
+      "seconds": [
+        0.491341106,
+        0.5522102,
+        0.532725157
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156024832,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.5271571080000006,
+        "io_wait_seconds": 0.5271571080000006,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.5171262859999999,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 1,
+      "variant": "overlap",
+      "median_seconds": 0.350211587,
+      "seconds": [
+        0.350211587,
+        0.376053917,
+        0.344260813
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156295168,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.5393784970000001,
+        "io_wait_seconds": 0.040089974999999965,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 148158848,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.010407783,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "overlap",
+      "median_seconds": 0.37654215,
+      "seconds": [
+        0.377232206,
+        0.351912021,
+        0.37654215
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156622848,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.544260535,
+        "io_wait_seconds": 0.03761388000000002,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 148158848,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.044458326,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "sync",
+      "median_seconds": 0.512156164,
+      "seconds": [
+        0.517406703,
+        0.500286832,
+        0.512156164
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156282880,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.5256999139999999,
+        "io_wait_seconds": 0.5256999139999999,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.4706949569999999,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 2,
+      "variant": "control",
+      "median_seconds": 0.529511409,
+      "seconds": [
+        0.565861552,
+        0.524854242,
+        0.529511409
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156803072,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.56292395,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 3,
+      "variant": "control",
+      "median_seconds": 0.517538455,
+      "seconds": [
+        0.518691001,
+        0.517538455,
+        0.507466382
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 157249536,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.4862298539999999,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 3,
+      "variant": "sync",
+      "median_seconds": 0.526997169,
+      "seconds": [
+        0.491844434,
+        0.534739837,
+        0.526997169
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156176384,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.5267955640000004,
+        "io_wait_seconds": 0.5267955640000004,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.49437843,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 3,
+      "variant": "overlap",
+      "median_seconds": 0.356331976,
+      "seconds": [
+        0.360956973,
+        0.356331976,
+        0.349105617
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 155914240,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.5441282330000001,
+        "io_wait_seconds": 0.04476654999999999,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 148158848,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 0.993672755,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "overlap",
+      "median_seconds": 0.36219191,
+      "seconds": [
+        0.344350199,
+        0.377683921,
+        0.36219191
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156102656,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.5434903980000001,
+        "io_wait_seconds": 0.04327117099999998,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 148158848,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.028017022,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "sync",
+      "median_seconds": 0.505001924,
+      "seconds": [
+        0.525646265,
+        0.499430727,
+        0.505001924
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156286976,
+      "native_tiles": {
+        "activation_calls": 1512,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "input_quantized_rows": 3036,
+        "io_service_seconds": 0.5300482709999996,
+        "io_wait_seconds": 0.5300482709999996,
+        "overlap_io": false,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.471433043,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 4,
+      "variant": "control",
+      "median_seconds": 0.554802622,
+      "seconds": [
+        0.55739159,
+        0.549748665,
+        0.554802622
+      ],
+      "output_sha256": "39d64a6ae410a18b59bae5d3637919161ec15ae3be78fa2894b8293d53dda826",
+      "memory_peak": 156897280,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1337720832,
+        "expert_visits": 756,
+        "peak_accounted_work_bytes": 130472320,
+        "preserve_down_reduction": true,
+        "read_calls": 1512,
+        "routed_rows": 24288,
+        "seconds": 1.6068400710000001,
+        "work_limit_bytes": 268435456
+      }
+    }
+  ],
+  "binaries": {
+    "control": "5cf4273be8bc8f650191c14905e8e895ac8eec9ecb5d056fa3cf7c3ad7395075",
+    "candidate": "deedd05e4b4d2bffedb061a4beb6f5ed34daa2d6e2135a59afdf7eb862b13e6d"
+  },
+  "summary": {
+    "control": 0.5290763380000001,
+    "sync": 0.5195766665,
+    "overlap": 0.35926194300000003
+  },
+  "passed": true
+}

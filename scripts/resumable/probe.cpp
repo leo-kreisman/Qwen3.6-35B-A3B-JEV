@@ -1,8 +1,10 @@
-// Standalone public-API experiment. Does not patch llama.cpp or the streamer.
+// Standalone CPU experiment. Bypass uses version-sensitive graph interception.
+// Does not patch llama.cpp source or the streamer.
 #include "llama.h"
 #include "ggml.h"
 #include "ggml-backend.h"
 #include "native_tiles.h"
+#include "native_bypass.h"
 #include <memory>
 #include "nlohmann/json.hpp"
 #include <algorithm>
@@ -37,9 +39,11 @@ template<class T> static std::vector<T> values(const ggml_tensor * t, ggml_type 
     return out;
 }
 struct Trace {
+    bool diagnostics=true;
     std::ofstream file; std::string dir, phase, error; int call=0, record=0, capture_layer=-1;
     Clock::time_point mark; uint64_t before=0;
     std::unique_ptr<NativeTiles> tiles;
+    std::unique_ptr<NativeBypass> bypass;
     bool replace_tiles=false;
     std::vector<float> ready_x;
     std::vector<int32_t> ready_ids;
@@ -47,6 +51,15 @@ struct Trace {
     json tile_checks=json::array();
     static bool callback(ggml_tensor * t, bool ask, void * p) {
         auto & s=*static_cast<Trace*>(p);
+        try {
+            if(s.bypass&&s.bypass->interested(t))return s.bypass->visit(t,ask);
+        } catch(const std::exception & e) {
+            if(s.bypass)s.bypass->restore();
+            s.error=e.what();return false;
+        }
+        // Bypass control is required; route/tensor diagnostics are optional.
+        // check/replace still needs its validation captures.
+        if(!s.diagnostics && (!s.tiles || s.bypass))return !ask;
         // The up projection exposes normalized expert inputs and actual route IDs.
         bool wanted=t->op==GGML_OP_MUL_MAT_ID && t->src[0] &&
                     std::strstr(t->src[0]->name,".ffn_up_exps.weight");
@@ -118,7 +131,7 @@ struct Trace {
     }
 };
 int main(int argc,char **argv) try {
-    if(argc<5) throw std::runtime_error("usage: probe MODEL INPUT_JSON OUTPUT_DIR full|serial|shared|full-padded|shared-padded|split-serial|restore-serial [trace_layer|-1|-2|-3] [threads] [pack check|replace staged|tiled]");
+    if(argc<5) throw std::runtime_error("usage: probe MODEL INPUT_JSON OUTPUT_DIR full|serial|shared|full-padded|shared-padded|split-serial|restore-serial [trace_layer|-1|-2|-3] [threads] [pack check|replace|bypass staged|tiled]");
     std::string mode=argv[4];
     if(mode!="full"&&mode!="serial"&&mode!="shared"&&mode!="full-padded"&&mode!="shared-padded"&&mode!="split-serial"&&mode!="restore-serial") throw std::runtime_error("unknown mode");
     bool padded=mode=="full-padded"||mode=="shared-padded";
@@ -132,15 +145,24 @@ int main(int argc,char **argv) try {
     for(const auto & row:rows) { tokens.push_back(row.at("tokens").get<std::vector<llama_token>>()); total+=tokens.back().size(); }
     for(const auto & t:tokens) if(prefix>=(int)t.size()||!std::equal(t.begin(),t.begin()+prefix,tokens[0].begin()))
         throw std::runtime_error("invalid prefix");
-    Trace trace; trace.dir=dir.string(); bool tracing=argc>5;
+    Trace trace; trace.dir=dir.string(); bool tracing=argc>5 && input.value("diagnostics",true);
+    trace.diagnostics=tracing;
     if(tracing) { trace.capture_layer=std::stoi(argv[5]); trace.file.open(dir/"routes.jsonl"); }
     if(argc>7) {
         if(argc>9&&std::string(argv[9])!="staged"&&std::string(argv[9])!="tiled")
             throw std::runtime_error("tile reduction must be staged or tiled");
-        trace.tiles=std::make_unique<NativeTiles>(argv[7],argc>6?std::stoi(argv[6]):6,argc<=9||std::string(argv[9])=="staged");
-        if(argc<9||(std::string(argv[8])!="check"&&std::string(argv[8])!="replace"))
-            throw std::runtime_error("tile action must be check or replace");
+        std::string tile_io=input.value("tile_io",std::string("sync"));
+        if(tile_io!="sync"&&tile_io!="overlap")throw std::runtime_error("invalid tile_io setting");
+        trace.tiles=std::make_unique<NativeTiles>(argv[7],argc>6?std::stoi(argv[6]):6,argc<=9||std::string(argv[9])=="staged",tile_io=="overlap");
+        trace.tiles->validate_model_path(argv[1]);
+        if(argc<9||(std::string(argv[8])!="check"&&std::string(argv[8])!="replace"&&std::string(argv[8])!="bypass"))
+            throw std::runtime_error("tile action must be check, replace or bypass");
         trace.replace_tiles=std::string(argv[8])=="replace";
+        if(std::string(argv[8])=="bypass") {
+            if(argc>9&&std::string(argv[9])!="staged")throw std::runtime_error("bypass requires staged reduction");
+            trace.bypass=std::make_unique<NativeBypass>(*trace.tiles,argv[1],input.value("protect_bypassed_weights",false));
+        }
+        if(!tracing&&!trace.bypass)throw std::runtime_error("check/replace requires diagnostics enabled");
     }
     llama_backend_init();
     auto mp=llama_model_default_params(); mp.n_gpu_layers=0; mp.use_extra_bufts=false; mp.load_mode=LLAMA_LOAD_MODE_MMAP;
@@ -167,7 +189,7 @@ int main(int argc,char **argv) try {
     std::string flash=input.value("flash_attention",std::string("auto"));
     if(flash!="auto"&&flash!="disabled")throw std::runtime_error("invalid flash_attention experiment setting");
     if(flash=="disabled")cp.flash_attn_type=LLAMA_FLASH_ATTN_TYPE_DISABLED;
-    if(tracing) { cp.cb_eval=Trace::callback; cp.cb_eval_user_data=&trace; }
+    if(tracing||trace.tiles) { cp.cb_eval=Trace::callback; cp.cb_eval_user_data=&trace; }
     auto * ctx=llama_init_from_model(model,cp);
     if(!ctx) throw std::runtime_error("context load failed");
     json report={{"mode",mode},{"tracing",tracing},{"flash_attention",flash},{"load_seconds",seconds(started)},
@@ -192,6 +214,9 @@ int main(int argc,char **argv) try {
         auto t=Clock::now(); auto r=reads(); trace.phase=phase; ++trace.call; trace.mark=t; trace.before=r;
         int rc=llama_decode(ctx,batch);
         report["phases"].push_back({{"phase",phase},{"tokens",count},{"seconds",seconds(t)},{"read_bytes",reads()-r}});
+        if(trace.bypass&&!trace.bypass->idle()) {
+            trace.bypass->restore();if(trace.error.empty())trace.error="incomplete bypass group";
+        }
         if(rc||!trace.error.empty()) { llama_batch_free(batch); throw std::runtime_error("decode failed: "+std::to_string(rc)+" "+trace.error); }
         if(logits) { int index=0;
             for(int seq:seqs) {
@@ -210,6 +235,12 @@ int main(int argc,char **argv) try {
         llama_batch_free(batch);
     };
     std::vector<int> seqs; for(int i=0;i<n;++i)seqs.push_back(i);
+    int repetitions=input.value("repetitions",1);
+    if(repetitions<1||repetitions>8)throw std::runtime_error("invalid repetition count");
+    report["iterations"]=json::array();
+    for(int repetition=0;repetition<repetitions;++repetition) {
+    if(repetition)llama_memory_clear(llama_get_memory(ctx),true);
+    report["answers"]=json::array();
     if(mode=="full"||mode=="full-padded") decode(seqs,0,true,"full");
     else if(mode=="serial") {
         for(int i=0;i<n;++i) { llama_memory_clear(llama_get_memory(ctx),true); decode({i},0,true,"serial-"+std::to_string(i)); }
@@ -239,10 +270,14 @@ int main(int argc,char **argv) try {
         std::vector<uint8_t>().swap(saved);
         decode(seqs,prefix,true,"suffix");
     }
+    report["iterations"].push_back(report["answers"]);
+    }
     if(trace.tiles) { report["native_tiles"]=trace.tiles->stats();report["tile_checks"]=trace.tile_checks;
-        report["tile_validation_only"]=true; }
+        report["tile_validation_only"]=!trace.bypass;
+        if(trace.bypass)report["native_bypass"]=trace.bypass->stats(); }
     report["scoring_seconds"]=seconds(begin); report["scoring_read_bytes"]=reads()-rb;
     std::ofstream(dir/"result.json")<<report.dump(2)<<'\n';
     std::cout<<report.dump()<<'\n';
+    if(trace.bypass)trace.bypass->unprotect();
     llama_free(ctx); llama_model_free(model); llama_backend_free(); return 0;
 } catch(const std::exception &e) { std::cerr<<"probe: "<<e.what()<<'\n'; return 1; }

@@ -1,0 +1,122 @@
+{
+  "mode": "shared-padded",
+  "rounds": 1,
+  "diagnostics": false,
+  "binaries": {
+    "control": {
+      "path": "/home/scribe/Projects/JEV_experiment/results/resumable-performance-20260926/control-probe",
+      "sha256": "f1bbedc1adbfa96550ca7455642c06b0dd25d734732ff6f346fbc301b67deff8"
+    },
+    "candidate": {
+      "path": "/home/scribe/Projects/JEV_experiment/results/resumable-performance-20260926/overlap-probe",
+      "sha256": "0a2a8184210cb6cfcfe27514062f590c58fac2ed6f8e10946f9f07f122e766d6"
+    }
+  },
+  "runs": [
+    {
+      "round": 1,
+      "variant": "baseline",
+      "seconds": 56.953233616,
+      "read_bytes": 56050397184,
+      "memory_peak": 8589934592,
+      "native_tiles": null
+    },
+    {
+      "round": 1,
+      "variant": "control",
+      "seconds": 57.910643643,
+      "read_bytes": 55789297664,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1362493440,
+        "expert_visits": 770,
+        "peak_accounted_work_bytes": 54107392,
+        "preserve_down_reduction": true,
+        "read_calls": 1540,
+        "routed_rows": 7456,
+        "seconds": 0.9450601729999999,
+        "work_limit_bytes": 268435456
+      }
+    },
+    {
+      "round": 1,
+      "variant": "candidate",
+      "seconds": 55.426792545,
+      "read_bytes": 55715631104,
+      "memory_peak": 8589934592,
+      "native_tiles": {
+        "activation_calls": 1540,
+        "activation_graph_builds": 1,
+        "decoded_weight_bytes": 0,
+        "direct_read_bytes": 1362493440,
+        "expert_visits": 770,
+        "input_quantized_rows": 932,
+        "io_service_seconds": 0.5367001000000001,
+        "io_wait_seconds": 0.21979321999999996,
+        "overlap_io": true,
+        "peak_accounted_work_bytes": 71793920,
+        "preserve_down_reduction": true,
+        "read_calls": 1540,
+        "routed_rows": 7456,
+        "seconds": 0.6440356110000001,
+        "work_limit_bytes": 268435456
+      }
+    }
+  ],
+  "pairs": [
+    {
+      "round": 1,
+      "variant": "control",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        },
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    },
+    {
+      "round": 1,
+      "variant": "candidate",
+      "exact": true,
+      "differences": [
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        },
+        {
+          "flips": [],
+          "max_probability_drift": 0.0,
+          "max_logit_drift": 0.0
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "caveat": "Only the packed layer is replaced. Timings include callback control overhead; no diagnostic route/tensor logging. Small repeated fixture, not production p95.",
+  "summary": {
+    "baseline": {
+      "median_seconds": 56.953233616,
+      "median_read_bytes": 56050397184
+    },
+    "control": {
+      "median_seconds": 57.910643643,
+      "median_read_bytes": 55789297664
+    },
+    "candidate": {
+      "median_seconds": 55.426792545,
+      "median_read_bytes": 55715631104
+    }
+  },
+  "paired_candidate_minus_control_seconds": [
+    -2.4838510980000024
+  ]
+}

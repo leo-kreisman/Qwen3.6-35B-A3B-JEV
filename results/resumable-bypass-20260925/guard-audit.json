@@ -1,0 +1,31 @@
+{
+  "runs": [
+    {
+      "path": "results/resumable-bypass-20260925/branch.guard.json",
+      "exit_code": 0
+    },
+    {
+      "path": "results/resumable-bypass-20260925/first.guard.json",
+      "exit_code": 1
+    },
+    {
+      "path": "results/resumable-bypass-20260925/reuse.guard.json",
+      "exit_code": 0
+    },
+    {
+      "path": "results/resumable-bypass-20260925/corrected.guard.json",
+      "exit_code": 0
+    },
+    {
+      "path": "results/resumable-bypass-20260925/paired/baseline.guard.json",
+      "exit_code": 0
+    },
+    {
+      "path": "results/resumable-bypass-20260925/paired/bypass.guard.json",
+      "exit_code": 0
+    }
+  ],
+  "successful": 5,
+  "initial_rejection": 1,
+  "all_oom_events_zero": true
+}

@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "iteration_comparisons": [
+    {
+      "flips": [],
+      "max_probability_drift": 0.0,
+      "max_logit_drift": 0.0
+    }
+  ],
+  "baseline_expert_groups": 3,
+  "bypass": {
+    "experimental_graph_interception": true,
+    "groups": 3,
+    "operators_restored": true,
+    "protected_original_weight_bytes": 452972544,
+    "skipped_activation": 3,
+    "skipped_down": 3,
+    "skipped_gate": 3,
+    "skipped_up": 3
+  },
+  "measurements": {
+    "baseline": {
+      "scoring_seconds": 47.254426904,
+      "scoring_read_bytes": 40120635392
+    },
+    "bypass": {
+      "scoring_seconds": 47.083354073,
+      "scoring_read_bytes": 39928836096
+    }
+  },
+  "caveat": "one ordered pair; not a statistically established speedup; only packed layer bypassed"
+}

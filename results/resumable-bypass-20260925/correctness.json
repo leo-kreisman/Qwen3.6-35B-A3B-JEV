@@ -1,0 +1,101 @@
+{
+  "corrected": {
+    "iterations": [
+      {
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      }
+    ],
+    "native_bypass": {
+      "experimental_graph_interception": true,
+      "groups": 1,
+      "operators_restored": true,
+      "skipped_activation": 1,
+      "skipped_down": 1,
+      "skipped_gate": 1,
+      "skipped_up": 1
+    },
+    "native_tiles": {
+      "decoded_weight_bytes": 0,
+      "direct_read_bytes": 398131200,
+      "expert_visits": 225,
+      "peak_accounted_work_bytes": 112771840,
+      "preserve_down_reduction": true,
+      "read_calls": 450,
+      "routed_rows": 6976,
+      "seconds": 0.492273719,
+      "work_limit_bytes": 268435456
+    }
+  },
+  "reuse": {
+    "iterations": [
+      {
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      },
+      {
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      },
+      {
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      }
+    ],
+    "native_bypass": {
+      "experimental_graph_interception": true,
+      "groups": 3,
+      "operators_restored": true,
+      "protected_original_weight_bytes": 452972544,
+      "skipped_activation": 3,
+      "skipped_down": 3,
+      "skipped_gate": 3,
+      "skipped_up": 3
+    },
+    "native_tiles": {
+      "decoded_weight_bytes": 0,
+      "direct_read_bytes": 1125384192,
+      "expert_visits": 636,
+      "peak_accounted_work_bytes": 15672064,
+      "preserve_down_reduction": true,
+      "read_calls": 1272,
+      "routed_rows": 2496,
+      "seconds": 0.662976631,
+      "work_limit_bytes": 268435456
+    }
+  },
+  "branch": {
+    "iterations": [
+      {
+        "flips": [],
+        "max_probability_drift": 0.0,
+        "max_logit_drift": 0.0
+      }
+    ],
+    "native_bypass": {
+      "experimental_graph_interception": true,
+      "groups": 2,
+      "operators_restored": true,
+      "protected_original_weight_bytes": 452972544,
+      "skipped_activation": 2,
+      "skipped_down": 2,
+      "skipped_gate": 2,
+      "skipped_up": 2
+    },
+    "native_tiles": {
+      "decoded_weight_bytes": 0,
+      "direct_read_bytes": 681246720,
+      "expert_visits": 385,
+      "peak_accounted_work_bytes": 54107392,
+      "preserve_down_reduction": true,
+      "read_calls": 770,
+      "routed_rows": 3728,
+      "seconds": 0.5051242490000001,
+      "work_limit_bytes": 268435456
+    }
+  }
+}

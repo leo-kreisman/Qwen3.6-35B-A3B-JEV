@@ -1,4 +1,5 @@
 #include "native_tiles.h"
+#include "native_bypass.h"
 #include <filesystem>
 #include <iostream>
 #include <random>
@@ -48,6 +49,21 @@ int main(int argc,char **argv) try {
             require(std::equal(y.begin(),y.end(),output.begin()+row*d),"ready grouping changed values");
         }
         require(grouped.read_calls*2==serial.read_calls,"ready grouping did not reuse tiles");++tests;
+        // Reuse the same activation graph across shrinking/growing row counts,
+        // and across invocations with different backing-buffer addresses.
+        auto again=grouped.evaluate(x,ids,n,1);require(again==output,"repeat changed values");
+        std::vector<float> first(x.begin(),x.begin()+d);
+        auto small=grouped.evaluate(first,{ids[0]},1,1);
+        require(std::equal(small.begin(),small.end(),output.begin()),"shrunk graph changed values");
+        auto twice_x=x;twice_x.insert(twice_x.end(),x.begin(),x.end());
+        auto twice_ids=ids;twice_ids.insert(twice_ids.end(),ids.begin(),ids.end());
+        auto large=grouped.evaluate(twice_x,twice_ids,2*n,1);
+        require(std::equal(output.begin(),output.end(),large.begin())&&std::equal(output.begin(),output.end(),large.begin()+output.size()),"grown graph changed values");
+        require(grouped.activation_graph_builds==1&&grouped.input_quantized_rows==uint64_t(4*n+1),"setup was not reused");++tests;
+        NativeTiles pipeline(dir.string(),2,true,true);
+        require(pipeline.evaluate(x,ids,n,1)==output,"overlap changed values");
+        require(pipeline.evaluate(twice_x,twice_ids,2*n,1)==large,"overlap reuse changed values");
+        require(pipeline.read_calls==8,"overlap read count differs");++tests;
         // Native whole-expert graph is an independent reference for both gate
         // activation and the down reduction; use F32 input so ggml quantizes it.
         for(int row=0;row<n;++row) {
@@ -66,9 +82,36 @@ int main(int argc,char **argv) try {
         }++tests;
         bool rejected=false;try {grouped.evaluate(x,{2,0,1,0},n,1);}catch(const std::runtime_error&){rejected=true;}
         require(rejected,"invalid expert accepted");++tests;
+        // The interception seam must restore operators on normal cleanup and
+        // reject unsupported graphs before mutating their operations.
+        auto metadata_path=(dir/"model.gguf").string();auto * meta=gguf_init_empty();
+        require(gguf_write_to_file(meta,metadata_path.c_str(),true),"metadata fixture write failed");gguf_free(meta);
+        ggml_init_params mip{8*ggml_tensor_overhead()+1024,nullptr,true};auto * mc=ggml_init(mip);
+        auto * mw=ggml_new_tensor_3d(mc,type,d,m,e);ggml_set_name(mw,"blk.0.ffn_gate_exps.weight");
+        auto * mx=ggml_new_tensor_3d(mc,GGML_TYPE_F32,d,1,n);
+        auto * mi=ggml_new_tensor_2d(mc,GGML_TYPE_I32,1,n);
+        auto * mg=ggml_mul_mat_id(mc,mw,mx,mi);ggml_set_name(mg,"ffn_moe_gate-0");
+        {
+            NativeBypass bypass(grouped,metadata_path);
+            require(bypass.interested(mg),"target operation missed");
+            require(bypass.visit(mg,true)&&mg->op==GGML_OP_NONE,"operation not suppressed");
+            bypass.restore();require(mg->op==GGML_OP_MUL_MAT_ID&&bypass.idle(),"explicit restore failed");
+            bypass.visit(mg,true);
+        }
+        require(mg->op==GGML_OP_MUL_MAT_ID,"destructor did not restore operation");++tests;
+        {
+            NativeBypass bypass(grouped,metadata_path);mg->op=GGML_OP_SQR;bool failed=false;
+            try {bypass.visit(mg,true);}catch(const std::runtime_error&){failed=true;}
+            require(failed&&mg->op==GGML_OP_SQR&&bypass.idle(),"unsupported graph was mutated");
+        }
+        ggml_free(mc);++tests;
         manifest["blocks"].erase(0);std::ofstream(dir/"manifest.json")<<manifest;
         rejected=false;try {NativeTiles invalid(dir.string());}catch(const std::runtime_error&){rejected=true;}
         require(rejected,"missing tile accepted");++tests;
+        // A producer error must wake a waiting consumer and join cleanly.
+        std::filesystem::resize_file(dir/"weights.bin",4096);
+        rejected=false;try {pipeline.evaluate(x,ids,n,1);}catch(const std::runtime_error&){rejected=true;}
+        require(rejected,"short asynchronous read accepted");++tests;
     }
     std::cout<<json({{"checks",tests},{"passed",true}}).dump()<<'\n';return 0;
 } catch(const std::exception&e) {std::cerr<<e.what()<<'\n';return 1;}

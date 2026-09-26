@@ -207,3 +207,58 @@ g++ -std=c++17 -O2 -fopenmp -Wall -Wextra \
   -o results/resumable-local/native-tests
 results/resumable-local/native-tests results/resumable-local/new-test-fixtures
 ```
+
+## Experimental bypass (no duplicate expert calculation)
+
+See [the bypass report](../../docs/RESUMABLE-BYPASS-RESULT.md) for the version-sensitive
+execution seam and limitations. `bypass staged` suppresses the original packed
+layer's gate/up/activation/down operations, restores their metadata at callback
+boundaries, and supplies tile outputs. It is graph interception, not an officially
+supported skip API. No service default enables it.
+
+Use `run_bypass.py` to compare it against a separately executed baseline, including
+exact logits and original-operation counts. `--protect-weights` makes interior
+pages of original expert weights unreadable as an access diagnostic. In a frozen
+probe input, `repetitions` exercises graph reuse in one context. The existing
+`check`/`replace` paths remain available for ordinary output comparison.
+
+## CPU setup reuse and bounded transport experiments
+
+[Measured results and validation](../../docs/RESUMABLE-PERFORMANCE-RESULT.md).
+
+Frozen probe input may set `"diagnostics": false` to disable route/tensor logging
+while retaining necessary bypass control callbacks. A stock baseline then runs
+without a callback. `check`/`replace` require diagnostics because they capture and
+compare original outputs. No route file is created for a diagnostics-free run.
+
+`NativeTiles` shares prepared gate/up inputs when their native activation formats
+match, allocates expert scratch once per ready group, and reuses a native SwiGLU
+graph. Shapes and backing pointers are rebound together; the graph is re-planned
+for each use. Native activation and full down-reduction semantics are retained.
+
+The default `"tile_io": "sync"` retains synchronous direct reads. The experimental
+`"tile_io": "overlap"` creates one reader worker with two aligned buffers per
+evaluation. It reads only the already-routed expert bundles, in consumption order.
+The CPU releases each buffer after its last use. The local budget includes both
+buffers, read descriptors, and a conservative worker allowance. Errors wake waiting
+consumers and join the worker. This is bounded known-demand prefetch, not a route
+predictor, persistent expert cache, or cross-request scheduler.
+
+Statistics distinguish `io_service_seconds` (time inside reads) from
+`io_wait_seconds` (consumer waiting for a ready buffer, or synchronous read time).
+Worker read durations overlap computation and must not be added to whole-request
+wall time. Setup counters include `activation_graph_builds`, `activation_calls`,
+and `input_quantized_rows`. The memory statistic remains design accounting rather
+than measured whole-process memory.
+
+`run_performance.py` alternates stock/control/candidate order under the cold-cache,
+8 GiB/no-swap guard. Both tile binaries must support diagnostics-free operation.
+It checks exact selected logits and probabilities, operation counts, and absence
+of diagnostic files. Use even round counts to balance both ordering directions.
+
+`native_benchmark.cpp` and `run_layer_matrix.py` isolate control/synchronous/overlap
+tile execution using captured real inputs and routes. Every variant must return
+byte-identical output and the same direct-read byte/call counts. Captured readiness
+and a single layer make these kernel/transport measurements, not full-model speed
+claims. Build the candidate benchmark with `-DTILE_ASYNC_SUPPORTED`, using the same
+GGML include/link flags as the native tests, plus `-pthread`.

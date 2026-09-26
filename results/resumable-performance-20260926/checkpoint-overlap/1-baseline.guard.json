@@ -1,0 +1,34 @@
+{
+  "command": [
+    "results/resumable-performance-20260926/overlap-probe",
+    "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+    "results/resumable-performance-20260926/checkpoint-overlap/input.json",
+    "results/resumable-performance-20260926/checkpoint-overlap/1-baseline",
+    "shared-padded",
+    "-1",
+    "6"
+  ],
+  "wall_seconds": 69.59237083699554,
+  "exit_code": 0,
+  "process_tree_read_bytes": 76429324288,
+  "memory_max": 8589934592,
+  "memory_peak": 8589934592,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 47983,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0
+  },
+  "cold_cache": [
+    {
+      "path": "/home/scribe/models/unsloth/Qwen3.6-35B-A3B-GGUF/Qwen3.6-35B-A3B-JEV-Q5K-nonexpert.gguf",
+      "cached_bytes": 0
+    },
+    {
+      "path": "results/resumable-20260925/pack/weights.bin",
+      "cached_bytes": 0
+    }
+  ]
+}
